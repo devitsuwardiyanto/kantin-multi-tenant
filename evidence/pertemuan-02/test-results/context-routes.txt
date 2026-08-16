@@ -1,0 +1,3 @@
+ GET|HEAD admin/dashboard .. admin.dashboard › routes/admin.php:10
+ GET|HEAD kantin/{canteen} .. customer.home › routes/customer.php:9
+ GET|HEAD tenant/{tenant}/dashboard tenant.dashboard › routes/tenant.php:10
