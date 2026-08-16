@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+
+# Env & secrets (never commit real values)
+.env
+.env.*
+!.env.example
+
+# Dependencies & build (reconstructed via composer install / npm ci)
+/vendor
+/node_modules
+/public/build
+/public/hot
+/storage/*.key
+
+# Local scratch
+/.phpunit.cache

@@ -1,0 +1,665 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="7520" height="2820" viewBox="0 0 7520 2820">
+<rect width="100%" height="100%" fill="#F8FAFC"/>
+<style>text{font-family:DejaVu Sans,Arial,sans-serif}.title{font-size:46px;font-weight:700}.subtitle{font-size:24px}.panel{font-size:28px;font-weight:700}.node-title{font-size:26px;font-weight:700;fill:white}.field{font-size:22px}.card{filter:drop-shadow(0px 4px 4px rgba(15,23,42,.12))}.card-line{stroke:#CBD5E1;stroke-width:1}</style>
+<text x="70" y="62" class="title" fill="#0F172A">ERD Aplikasi Kantin Multi-Tenant — Baseline Fase 0</text>
+<text x="70" y="108" class="subtitle" fill="#475569">MariaDB 10.6+ · shared database · parent order + tenant orders · snapshot transaksi · ledger append-only</text>
+<rect x="60" y="150" width="1360" height="2510" rx="22" fill="#DBEAFE" fill-opacity="0.42" stroke="#CBD5E1" stroke-width="2"/>
+<text x="88" y="198" class="panel" fill="#2563EB">A. Tenancy, pengguna, dan akses</text>
+<rect x="1470" y="150" width="1010" height="2510" rx="22" fill="#CCFBF1" fill-opacity="0.42" stroke="#CBD5E1" stroke-width="2"/>
+<text x="1498" y="198" class="panel" fill="#0F766E">B. Meja, QR, dan sesi anonim</text>
+<rect x="2530" y="150" width="1480" height="2510" rx="22" fill="#DCFCE7" fill-opacity="0.42" stroke="#CBD5E1" stroke-width="2"/>
+<text x="2558" y="198" class="panel" fill="#15803D">C. Katalog dan konfigurasi tenant</text>
+<rect x="4060" y="150" width="1100" height="2510" rx="22" fill="#FFEDD5" fill-opacity="0.42" stroke="#CBD5E1" stroke-width="2"/>
+<text x="4088" y="198" class="panel" fill="#C2410C">D. Order dan snapshot</text>
+<rect x="5210" y="150" width="1100" height="2510" rx="22" fill="#F3E8FF" fill-opacity="0.42" stroke="#CBD5E1" stroke-width="2"/>
+<text x="5238" y="198" class="panel" fill="#7E22CE">E. Pembayaran dan keuangan</text>
+<rect x="6360" y="150" width="1100" height="2510" rx="22" fill="#E0E7FF" fill-opacity="0.42" stroke="#CBD5E1" stroke-width="2"/>
+<text x="6388" y="198" class="panel" fill="#4338CA">F. Integrasi asinkron dan audit</text>
+<polyline points="373,482 373,581 427,581 427,680" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="373" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="373" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="427" cy="680" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="427" y="687" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,348 730,348 730,814 760,814" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="348" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="355" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="760" cy="814" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="760" y="821" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="1051,482 1051,581 1069,581 1069,680" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="1051" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1051" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="1069" cy="680" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1069" y="687" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,796 730,796 730,1226 760,1226" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="796" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="803" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="760" cy="1226" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="760" y="1233" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="1069,482 1069,796 1051,796 1051,1110" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="1069" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1069" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="1051" cy="1110" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1051" y="1117" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="418,912 418,1011 382,1011 382,1110" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="418" cy="912" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="418" y="919" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="382" cy="1110" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="382" y="1117" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<polyline points="427,912 427,1226 373,1226 373,1540" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="427" cy="912" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="427" y="919" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="373" cy="1540" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="373" y="1547" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,339 1105,339 1105,443 1510,443" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="339" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="346" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="1510" cy="443" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1510" y="450" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="1957,532 1957,666 1993,666 1993,800" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="1957" cy="532" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1957" y="539" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="1993" cy="800" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1993" y="807" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="1966,532 1966,916 1984,916 1984,1300" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="1966" cy="532" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1966" y="539" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="1984" cy="1300" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1984" y="1307" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="1975,1032 1975,1166 1975,1166 1975,1300" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="1975" cy="1032" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1975" y="1039" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="1975" cy="1300" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="1975" y="1307" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,805 1635,805 1635,357 2570,357" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="805" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="812" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="2570" cy="357" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2570" y="364" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,814 2000,814 2000,348 3300,348" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="814" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="821" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="3300" cy="348" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3300" y="355" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,823 1635,823 1635,789 2570,789" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="823" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="830" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="2570" cy="789" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2570" y="796" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,769 1635,769 1635,1293 2570,1293" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="769" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="776" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="2570" cy="1293" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2570" y="1300" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="2882,932 2882,1041 2918,1041 2918,1150" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="2882" cy="932" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2882" y="939" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="2918" cy="1150" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2918" y="1157" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,787 2000,787 2000,825 3300,825" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="787" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="794" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="3300" cy="825" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3300" y="832" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="3630,932 3630,1041 3630,1041 3630,1150" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="3630" cy="932" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3630" y="939" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="3630" cy="1150" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3630" y="1157" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="2909,1382 2909,1491 3256,1491 3256,1600" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="2909" cy="1382" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2909" y="1389" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="3256" cy="1600" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3256" y="1607" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="3648,932 3648,1266 3247,1266 3247,1600" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="3648" cy="932" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3648" y="939" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="3247" cy="1600" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3247" y="1607" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="2440,1443 3270,1443 3270,339 4100,339" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="2440" cy="1443" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2440" y="1450" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4100" cy="339" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4100" y="346" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="4583,482 4583,591 4637,591 4637,700" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="4583" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4583" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4637" cy="700" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4637" y="707" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,778 2400,778 2400,834 4100,834" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="778" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="785" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4100" cy="834" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4100" y="841" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="3960,357 4030,357 4030,825 4100,825" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="3960" cy="357" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3960" y="364" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4100" cy="825" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4100" y="832" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="4610,932 4610,1041 4610,1041 4610,1150" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="4610" cy="932" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4610" y="939" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4610" cy="1150" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4610" y="1157" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="3230,1275 3665,1275 3665,1257 4100,1257" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="3230" cy="1275" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3230" y="1282" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4100" cy="1257" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4100" y="1264" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="4628,1382 4628,1491 4592,1491 4592,1600" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="4628" cy="1382" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4628" y="1389" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4592" cy="1600" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4592" y="1607" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="3960,1293 4030,1293 4030,1689 4100,1689" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="3960" cy="1293" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3960" y="1300" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4100" cy="1689" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4100" y="1696" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="3230,1239 3665,1239 3665,2193 4100,2193" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="3230" cy="1239" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="3230" y="1246" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4100" cy="2193" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4100" y="2200" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="4592,1382 4592,1716 4628,1716 4628,2050" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="4592" cy="1382" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4592" y="1389" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="4628" cy="2050" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="4628" y="2057" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5120,357 5185,357 5185,375 5250,375" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5120" cy="357" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5120" y="364" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5250" cy="375" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5250" y="382" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<polyline points="5760,482 5760,591 5760,591 5760,700" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5760" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5760" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5760" cy="700" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5760" y="707" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5769,482 5769,816 5751,816 5751,1150" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5769" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5769" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5751" cy="1150" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5751" y="1157" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5778,932 5778,1041 5742,1041 5742,1150" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5778" cy="932" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5778" y="939" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5742" cy="1150" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5742" y="1157" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,823 2975,823 2975,1689 5250,1689" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="823" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="830" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5250" cy="1689" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5250" y="1696" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,1629 2975,1629 2975,1743 5250,1743" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="1629" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="1636" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5250" cy="1743" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5250" y="1750" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,778 2975,778 2975,2184 5250,2184" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="778" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="785" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5250" cy="2184" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5250" y="2191" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5120,357 5185,357 5185,2175 5250,2175" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5120" cy="357" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5120" y="364" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5250" cy="2175" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5250" y="2182" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5120,816 5185,816 5185,2166 5250,2166" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5120" cy="816" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5120" y="823" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5250" cy="2166" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5250" y="2173" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5769,482 5769,1266 5751,1266 5751,2050" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5769" cy="482" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5769" y="489" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5751" cy="2050" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5751" y="2057" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5778,1832 5778,1941 5742,1941 5742,2050" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5778" cy="1832" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5778" y="1839" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="5742" cy="2050" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5742" y="2057" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5120,393 5760,393 5760,389 6400,389" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5120" cy="393" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5120" y="400" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="6400" cy="389" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="6400" y="396" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="5120,789 5760,789 5760,443 6400,443" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="5120" cy="789" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="5120" y="796" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="6400" cy="443" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="6400" y="450" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="2440,1398 4420,1398 4420,434 6400,434" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="2440" cy="1398" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="2440" y="1405" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="6400" cy="434" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="6400" y="441" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<polyline points="700,787 3550,787 3550,975 6400,975" fill="none" stroke="#64748B" stroke-width="3" opacity="0.55"/>
+<circle cx="700" cy="787" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="700" y="794" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">1</text>
+<circle cx="6400" cy="975" r="13" fill="white" stroke="#64748B" stroke-width="2"/>
+<text x="6400" y="982" text-anchor="middle" font-size="18" font-weight="700" fill="#0F172A">N</text>
+<g class="card">
+<rect x="100" y="250" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 116 250 H 684 Q 700 250 700 266 V 316 H 100 V 266 Q 100 250 116 250 Z" fill="#2563EB"/>
+<text x="120" y="293" class="node-title">canteens</text>
+<rect x="642" y="266" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="661" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="120" y="350" class="field" fill="#0F172A">PK id</text>
+<line x1="114" y1="361" x2="686" y2="361" class="card-line"/>
+<text x="120" y="386" class="field" fill="#0F172A">UQ code, slug</text>
+<line x1="114" y1="397" x2="686" y2="397" class="card-line"/>
+<text x="120" y="422" class="field" fill="#0F172A">tax_rate, service_fee_rate</text>
+<line x1="114" y1="433" x2="686" y2="433" class="card-line"/>
+<text x="120" y="458" class="field" fill="#0F172A">status</text>
+</g>
+<g class="card">
+<rect x="100" y="680" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 116 680 H 684 Q 700 680 700 696 V 746 H 100 V 696 Q 100 680 116 680 Z" fill="#2563EB"/>
+<text x="120" y="723" class="node-title">tenants</text>
+<rect x="642" y="696" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="661" y="720" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="120" y="780" class="field" fill="#0F172A">PK id</text>
+<line x1="114" y1="791" x2="686" y2="791" class="card-line"/>
+<text x="120" y="816" class="field" fill="#0F172A">FK canteen_id</text>
+<line x1="114" y1="827" x2="686" y2="827" class="card-line"/>
+<text x="120" y="852" class="field" fill="#0F172A">UQ canteen_id + code/slug</text>
+<line x1="114" y1="863" x2="686" y2="863" class="card-line"/>
+<text x="120" y="888" class="field" fill="#0F172A">status, deleted_at</text>
+</g>
+<g class="card">
+<rect x="100" y="1110" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 116 1110 H 684 Q 700 1110 700 1126 V 1176 H 100 V 1126 Q 100 1110 116 1110 Z" fill="#2563EB"/>
+<text x="120" y="1153" class="node-title">tenant_balances</text>
+<rect x="642" y="1126" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="661" y="1150" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="120" y="1210" class="field" fill="#0F172A">PK/FK tenant_id</text>
+<line x1="114" y1="1221" x2="686" y2="1221" class="card-line"/>
+<text x="120" y="1246" class="field" fill="#0F172A">available_amount</text>
+<line x1="114" y1="1257" x2="686" y2="1257" class="card-line"/>
+<text x="120" y="1282" class="field" fill="#0F172A">held_amount</text>
+<line x1="114" y1="1293" x2="686" y2="1293" class="card-line"/>
+<text x="120" y="1318" class="field" fill="#0F172A">CHECK saldo &gt;= 0</text>
+</g>
+<g class="card">
+<rect x="100" y="1540" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 116 1540 H 684 Q 700 1540 700 1556 V 1606 H 100 V 1556 Q 100 1540 116 1540 Z" fill="#2563EB"/>
+<text x="120" y="1583" class="node-title">tenant_bank_accounts</text>
+<rect x="642" y="1556" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="661" y="1580" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="120" y="1640" class="field" fill="#0F172A">PK id</text>
+<line x1="114" y1="1651" x2="686" y2="1651" class="card-line"/>
+<text x="120" y="1676" class="field" fill="#0F172A">FK tenant_id, verified_by</text>
+<line x1="114" y1="1687" x2="686" y2="1687" class="card-line"/>
+<text x="120" y="1712" class="field" fill="#0F172A">account_number_cipher</text>
+<line x1="114" y1="1723" x2="686" y2="1723" class="card-line"/>
+<text x="120" y="1748" class="field" fill="#0F172A">status, is_primary</text>
+</g>
+<g class="card">
+<rect x="760" y="250" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 776 250 H 1344 Q 1360 250 1360 266 V 316 H 760 V 266 Q 760 250 776 250 Z" fill="#2563EB"/>
+<text x="780" y="293" class="node-title">users</text>
+<rect x="1302" y="266" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="1321" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="780" y="350" class="field" fill="#0F172A">PK id</text>
+<line x1="774" y1="361" x2="1346" y2="361" class="card-line"/>
+<text x="780" y="386" class="field" fill="#0F172A">UQ email, phone_e164</text>
+<line x1="774" y1="397" x2="1346" y2="397" class="card-line"/>
+<text x="780" y="422" class="field" fill="#0F172A">password_hash</text>
+<line x1="774" y1="433" x2="1346" y2="433" class="card-line"/>
+<text x="780" y="458" class="field" fill="#0F172A">status</text>
+</g>
+<g class="card">
+<rect x="760" y="680" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 776 680 H 1344 Q 1360 680 1360 696 V 746 H 760 V 696 Q 760 680 776 680 Z" fill="#2563EB"/>
+<text x="780" y="723" class="node-title">user_canteen_roles</text>
+<rect x="1302" y="696" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="1321" y="720" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="780" y="780" class="field" fill="#0F172A">PK id</text>
+<line x1="774" y1="791" x2="1346" y2="791" class="card-line"/>
+<text x="780" y="816" class="field" fill="#0F172A">FK user_id</text>
+<line x1="774" y1="827" x2="1346" y2="827" class="card-line"/>
+<text x="780" y="852" class="field" fill="#0F172A">FK canteen_id</text>
+<line x1="774" y1="863" x2="1346" y2="863" class="card-line"/>
+<text x="780" y="888" class="field" fill="#0F172A">role</text>
+</g>
+<g class="card">
+<rect x="760" y="1110" width="600" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 776 1110 H 1344 Q 1360 1110 1360 1126 V 1176 H 760 V 1126 Q 760 1110 776 1110 Z" fill="#2563EB"/>
+<text x="780" y="1153" class="node-title">user_tenant_roles</text>
+<rect x="1302" y="1126" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="1321" y="1150" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="780" y="1210" class="field" fill="#0F172A">PK id</text>
+<line x1="774" y1="1221" x2="1346" y2="1221" class="card-line"/>
+<text x="780" y="1246" class="field" fill="#0F172A">FK user_id</text>
+<line x1="774" y1="1257" x2="1346" y2="1257" class="card-line"/>
+<text x="780" y="1282" class="field" fill="#0F172A">FK tenant_id</text>
+<line x1="774" y1="1293" x2="1346" y2="1293" class="card-line"/>
+<text x="780" y="1318" class="field" fill="#0F172A">role -&gt; TenantContext</text>
+</g>
+<g class="card">
+<rect x="1510" y="300" width="930" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 1526 300 H 2424 Q 2440 300 2440 316 V 366 H 1510 V 316 Q 1510 300 1526 300 Z" fill="#0F766E"/>
+<text x="1530" y="343" class="node-title">dining_tables</text>
+<rect x="2382" y="316" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="2401" y="340" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="1530" y="400" class="field" fill="#0F172A">PK id</text>
+<line x1="1524" y1="411" x2="2426" y2="411" class="card-line"/>
+<text x="1530" y="436" class="field" fill="#0F172A">FK canteen_id</text>
+<line x1="1524" y1="447" x2="2426" y2="447" class="card-line"/>
+<text x="1530" y="472" class="field" fill="#0F172A">UQ canteen_id + code</text>
+<line x1="1524" y1="483" x2="2426" y2="483" class="card-line"/>
+<text x="1530" y="508" class="field" fill="#0F172A">label, zone, status</text>
+</g>
+<g class="card">
+<rect x="1510" y="800" width="930" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 1526 800 H 2424 Q 2440 800 2440 816 V 866 H 1510 V 816 Q 1510 800 1526 800 Z" fill="#0F766E"/>
+<text x="1530" y="843" class="node-title">table_qr_tokens</text>
+<rect x="2382" y="816" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="2401" y="840" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="1530" y="900" class="field" fill="#0F172A">PK id</text>
+<line x1="1524" y1="911" x2="2426" y2="911" class="card-line"/>
+<text x="1530" y="936" class="field" fill="#0F172A">FK dining_table_id</text>
+<line x1="1524" y1="947" x2="2426" y2="947" class="card-line"/>
+<text x="1530" y="972" class="field" fill="#0F172A">UQ token_hash</text>
+<line x1="1524" y1="983" x2="2426" y2="983" class="card-line"/>
+<text x="1530" y="1008" class="field" fill="#0F172A">status, issued/expires/revoked</text>
+</g>
+<g class="card">
+<rect x="1510" y="1300" width="930" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 1526 1300 H 2424 Q 2440 1300 2440 1316 V 1366 H 1510 V 1316 Q 1510 1300 1526 1300 Z" fill="#0F766E"/>
+<text x="1530" y="1343" class="node-title">customer_sessions</text>
+<rect x="2382" y="1316" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="2401" y="1340" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="1530" y="1400" class="field" fill="#0F172A">PK id (ULID)</text>
+<line x1="1524" y1="1411" x2="2426" y2="1411" class="card-line"/>
+<text x="1530" y="1436" class="field" fill="#0F172A">FK canteen/table/qr_token</text>
+<line x1="1524" y1="1447" x2="2426" y2="1447" class="card-line"/>
+<text x="1530" y="1472" class="field" fill="#0F172A">UQ session_token_hash</text>
+<line x1="1524" y1="1483" x2="2426" y2="1483" class="card-line"/>
+<text x="1530" y="1508" class="field" fill="#0F172A">status, expires_at</text>
+</g>
+<g class="card">
+<rect x="2570" y="250" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 2586 250 H 3214 Q 3230 250 3230 266 V 316 H 2570 V 266 Q 2570 250 2586 250 Z" fill="#15803D"/>
+<text x="2590" y="293" class="node-title">tenant_operating_hours</text>
+<rect x="3172" y="266" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3191" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="2590" y="350" class="field" fill="#0F172A">PK id</text>
+<line x1="2584" y1="361" x2="3216" y2="361" class="card-line"/>
+<text x="2590" y="386" class="field" fill="#0F172A">FK tenant_id</text>
+<line x1="2584" y1="397" x2="3216" y2="397" class="card-line"/>
+<text x="2590" y="422" class="field" fill="#0F172A">UQ tenant + day</text>
+<line x1="2584" y1="433" x2="3216" y2="433" class="card-line"/>
+<text x="2590" y="458" class="field" fill="#0F172A">opens_at, closes_at</text>
+</g>
+<g class="card">
+<rect x="3300" y="250" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 3316 250 H 3944 Q 3960 250 3960 266 V 316 H 3300 V 266 Q 3300 250 3316 250 Z" fill="#15803D"/>
+<text x="3320" y="293" class="node-title">commission_schemes</text>
+<rect x="3902" y="266" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3921" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="3320" y="350" class="field" fill="#0F172A">PK id</text>
+<line x1="3314" y1="361" x2="3946" y2="361" class="card-line"/>
+<text x="3320" y="386" class="field" fill="#0F172A">FK tenant_id</text>
+<line x1="3314" y1="397" x2="3946" y2="397" class="card-line"/>
+<text x="3320" y="422" class="field" fill="#0F172A">commission_rate</text>
+<line x1="3314" y1="433" x2="3946" y2="433" class="card-line"/>
+<text x="3320" y="458" class="field" fill="#0F172A">valid_from, valid_to</text>
+</g>
+<g class="card">
+<rect x="2570" y="700" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 2586 700 H 3214 Q 3230 700 3230 716 V 766 H 2570 V 716 Q 2570 700 2586 700 Z" fill="#15803D"/>
+<text x="2590" y="743" class="node-title">menu_categories</text>
+<rect x="3172" y="716" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3191" y="740" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="2590" y="800" class="field" fill="#0F172A">PK id</text>
+<line x1="2584" y1="811" x2="3216" y2="811" class="card-line"/>
+<text x="2590" y="836" class="field" fill="#0F172A">FK tenant_id</text>
+<line x1="2584" y1="847" x2="3216" y2="847" class="card-line"/>
+<text x="2590" y="872" class="field" fill="#0F172A">UQ tenant + name</text>
+<line x1="2584" y1="883" x2="3216" y2="883" class="card-line"/>
+<text x="2590" y="908" class="field" fill="#0F172A">sort_order, is_active</text>
+</g>
+<g class="card">
+<rect x="3300" y="700" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 3316 700 H 3944 Q 3960 700 3960 716 V 766 H 3300 V 716 Q 3300 700 3316 700 Z" fill="#15803D"/>
+<text x="3320" y="743" class="node-title">modifier_groups</text>
+<rect x="3902" y="716" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3921" y="740" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="3320" y="800" class="field" fill="#0F172A">PK id</text>
+<line x1="3314" y1="811" x2="3946" y2="811" class="card-line"/>
+<text x="3320" y="836" class="field" fill="#0F172A">FK tenant_id</text>
+<line x1="3314" y1="847" x2="3946" y2="847" class="card-line"/>
+<text x="3320" y="872" class="field" fill="#0F172A">min_select, max_select</text>
+<line x1="3314" y1="883" x2="3946" y2="883" class="card-line"/>
+<text x="3320" y="908" class="field" fill="#0F172A">is_active</text>
+</g>
+<g class="card">
+<rect x="2570" y="1150" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 2586 1150 H 3214 Q 3230 1150 3230 1166 V 1216 H 2570 V 1166 Q 2570 1150 2586 1150 Z" fill="#15803D"/>
+<text x="2590" y="1193" class="node-title">menus</text>
+<rect x="3172" y="1166" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3191" y="1190" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="2590" y="1250" class="field" fill="#0F172A">PK id</text>
+<line x1="2584" y1="1261" x2="3216" y2="1261" class="card-line"/>
+<text x="2590" y="1286" class="field" fill="#0F172A">FK tenant_id, category_id</text>
+<line x1="2584" y1="1297" x2="3216" y2="1297" class="card-line"/>
+<text x="2590" y="1322" class="field" fill="#0F172A">base_price, stock_qty</text>
+<line x1="2584" y1="1333" x2="3216" y2="1333" class="card-line"/>
+<text x="2590" y="1358" class="field" fill="#0F172A">is_available, prep_minutes</text>
+</g>
+<g class="card">
+<rect x="3300" y="1150" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 3316 1150 H 3944 Q 3960 1150 3960 1166 V 1216 H 3300 V 1166 Q 3300 1150 3316 1150 Z" fill="#15803D"/>
+<text x="3320" y="1193" class="node-title">modifier_options</text>
+<rect x="3902" y="1166" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3921" y="1190" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="3320" y="1250" class="field" fill="#0F172A">PK id</text>
+<line x1="3314" y1="1261" x2="3946" y2="1261" class="card-line"/>
+<text x="3320" y="1286" class="field" fill="#0F172A">FK tenant_id, group_id</text>
+<line x1="3314" y1="1297" x2="3946" y2="1297" class="card-line"/>
+<text x="3320" y="1322" class="field" fill="#0F172A">price_delta, stock_qty</text>
+<line x1="3314" y1="1333" x2="3946" y2="1333" class="card-line"/>
+<text x="3320" y="1358" class="field" fill="#0F172A">is_available</text>
+</g>
+<g class="card">
+<rect x="2935" y="1600" width="660" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 2951 1600 H 3579 Q 3595 1600 3595 1616 V 1666 H 2935 V 1616 Q 2935 1600 2951 1600 Z" fill="#15803D"/>
+<text x="2955" y="1643" class="node-title">menu_modifier_groups</text>
+<rect x="3537" y="1616" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="3556" y="1640" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="2955" y="1700" class="field" fill="#0F172A">PK/FK menu_id</text>
+<line x1="2949" y1="1711" x2="3581" y2="1711" class="card-line"/>
+<text x="2955" y="1736" class="field" fill="#0F172A">PK/FK modifier_group_id</text>
+<line x1="2949" y1="1747" x2="3581" y2="1747" class="card-line"/>
+<text x="2955" y="1772" class="field" fill="#0F172A">FK tenant_id</text>
+<line x1="2949" y1="1783" x2="3581" y2="1783" class="card-line"/>
+<text x="2955" y="1808" class="field" fill="#0F172A">sort_order</text>
+</g>
+<g class="card">
+<rect x="4100" y="250" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 4116 250 H 5104 Q 5120 250 5120 266 V 316 H 4100 V 266 Q 4100 250 4116 250 Z" fill="#C2410C"/>
+<text x="4120" y="293" class="node-title">orders</text>
+<rect x="5062" y="266" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="5081" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="4120" y="350" class="field" fill="#0F172A">PK id; UQ public_id/order_number</text>
+<line x1="4114" y1="361" x2="5106" y2="361" class="card-line"/>
+<text x="4120" y="386" class="field" fill="#0F172A">FK canteen_id, customer_session_id</text>
+<line x1="4114" y1="397" x2="5106" y2="397" class="card-line"/>
+<text x="4120" y="422" class="field" fill="#0F172A">UQ checkout_key, tracking_token_hash</text>
+<line x1="4114" y1="433" x2="5106" y2="433" class="card-line"/>
+<text x="4120" y="458" class="field" fill="#0F172A">status, totals, customer/table snapshot</text>
+</g>
+<g class="card">
+<rect x="4100" y="700" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 4116 700 H 5104 Q 5120 700 5120 716 V 766 H 4100 V 716 Q 4100 700 4116 700 Z" fill="#C2410C"/>
+<text x="4120" y="743" class="node-title">tenant_orders</text>
+<rect x="5062" y="716" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="5081" y="740" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="4120" y="800" class="field" fill="#0F172A">PK id</text>
+<line x1="4114" y1="811" x2="5106" y2="811" class="card-line"/>
+<text x="4120" y="836" class="field" fill="#0F172A">FK order_id, tenant_id, commission_id</text>
+<line x1="4114" y1="847" x2="5106" y2="847" class="card-line"/>
+<text x="4120" y="872" class="field" fill="#0F172A">status, scheduled_at</text>
+<line x1="4114" y1="883" x2="5106" y2="883" class="card-line"/>
+<text x="4120" y="908" class="field" fill="#0F172A">subtotal/tax/fee/commission/net snapshot</text>
+</g>
+<g class="card">
+<rect x="4100" y="1150" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 4116 1150 H 5104 Q 5120 1150 5120 1166 V 1216 H 4100 V 1166 Q 4100 1150 4116 1150 Z" fill="#C2410C"/>
+<text x="4120" y="1193" class="node-title">order_items</text>
+<rect x="5062" y="1166" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="5081" y="1190" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="4120" y="1250" class="field" fill="#0F172A">PK id</text>
+<line x1="4114" y1="1261" x2="5106" y2="1261" class="card-line"/>
+<text x="4120" y="1286" class="field" fill="#0F172A">FK tenant_order_id, menu_id</text>
+<line x1="4114" y1="1297" x2="5106" y2="1297" class="card-line"/>
+<text x="4120" y="1322" class="field" fill="#0F172A">name/price/prep snapshot</text>
+<line x1="4114" y1="1333" x2="5106" y2="1333" class="card-line"/>
+<text x="4120" y="1358" class="field" fill="#0F172A">quantity, modifier_total, line_total</text>
+</g>
+<g class="card">
+<rect x="4100" y="1600" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 4116 1600 H 5104 Q 5120 1600 5120 1616 V 1666 H 4100 V 1616 Q 4100 1600 4116 1600 Z" fill="#C2410C"/>
+<text x="4120" y="1643" class="node-title">order_item_modifiers</text>
+<rect x="5062" y="1616" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="5081" y="1640" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="4120" y="1700" class="field" fill="#0F172A">PK id</text>
+<line x1="4114" y1="1711" x2="5106" y2="1711" class="card-line"/>
+<text x="4120" y="1736" class="field" fill="#0F172A">FK order_item/group/option</text>
+<line x1="4114" y1="1747" x2="5106" y2="1747" class="card-line"/>
+<text x="4120" y="1772" class="field" fill="#0F172A">group/option snapshot</text>
+<line x1="4114" y1="1783" x2="5106" y2="1783" class="card-line"/>
+<text x="4120" y="1808" class="field" fill="#0F172A">price_delta_snapshot</text>
+</g>
+<g class="card">
+<rect x="4100" y="2050" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 4116 2050 H 5104 Q 5120 2050 5120 2066 V 2116 H 4100 V 2066 Q 4100 2050 4116 2050 Z" fill="#C2410C"/>
+<text x="4120" y="2093" class="node-title">menu_stock_movements</text>
+<rect x="5062" y="2066" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="5081" y="2090" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="4120" y="2150" class="field" fill="#0F172A">PK id</text>
+<line x1="4114" y1="2161" x2="5106" y2="2161" class="card-line"/>
+<text x="4120" y="2186" class="field" fill="#0F172A">FK menu_id, order_item_id</text>
+<line x1="4114" y1="2197" x2="5106" y2="2197" class="card-line"/>
+<text x="4120" y="2222" class="field" fill="#0F172A">UQ idempotency_key</text>
+<line x1="4114" y1="2233" x2="5106" y2="2233" class="card-line"/>
+<text x="4120" y="2258" class="field" fill="#0F172A">type, quantity_delta</text>
+</g>
+<g class="card">
+<rect x="5250" y="250" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 5266 250 H 6254 Q 6270 250 6270 266 V 316 H 5250 V 266 Q 5250 250 5266 250 Z" fill="#7E22CE"/>
+<text x="5270" y="293" class="node-title">payments</text>
+<rect x="6212" y="266" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="6231" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="5270" y="350" class="field" fill="#0F172A">PK id</text>
+<line x1="5264" y1="361" x2="6256" y2="361" class="card-line"/>
+<text x="5270" y="386" class="field" fill="#0F172A">UQ order_id, payment_reference</text>
+<line x1="5264" y1="397" x2="6256" y2="397" class="card-line"/>
+<text x="5270" y="422" class="field" fill="#0F172A">UQ idempotency_key</text>
+<line x1="5264" y1="433" x2="6256" y2="433" class="card-line"/>
+<text x="5270" y="458" class="field" fill="#0F172A">amount, status, settled_at</text>
+</g>
+<g class="card">
+<rect x="5250" y="700" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 5266 700 H 6254 Q 6270 700 6270 716 V 766 H 5250 V 716 Q 5250 700 5266 700 Z" fill="#7E22CE"/>
+<text x="5270" y="743" class="node-title">payment_attempts</text>
+<rect x="6212" y="716" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="6231" y="740" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="5270" y="800" class="field" fill="#0F172A">PK id</text>
+<line x1="5264" y1="811" x2="6256" y2="811" class="card-line"/>
+<text x="5270" y="836" class="field" fill="#0F172A">FK payment_id</text>
+<line x1="5264" y1="847" x2="6256" y2="847" class="card-line"/>
+<text x="5270" y="872" class="field" fill="#0F172A">UQ provider_reference</text>
+<line x1="5264" y1="883" x2="6256" y2="883" class="card-line"/>
+<text x="5270" y="908" class="field" fill="#0F172A">qris_payload, expires_at, status</text>
+</g>
+<g class="card">
+<rect x="5250" y="1150" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 5266 1150 H 6254 Q 6270 1150 6270 1166 V 1216 H 5250 V 1166 Q 5250 1150 5266 1150 Z" fill="#7E22CE"/>
+<text x="5270" y="1193" class="node-title">payment_events</text>
+<rect x="6212" y="1166" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="6231" y="1190" text-anchor="middle" font-size="20" font-weight="700" fill="white">P</text>
+<text x="5270" y="1250" class="field" fill="#0F172A">PK id</text>
+<line x1="5264" y1="1261" x2="6256" y2="1261" class="card-line"/>
+<text x="5270" y="1286" class="field" fill="#0F172A">FK payment/attempt</text>
+<line x1="5264" y1="1297" x2="6256" y2="1297" class="card-line"/>
+<text x="5270" y="1322" class="field" fill="#0F172A">UQ provider_event_id</text>
+<line x1="5264" y1="1333" x2="6256" y2="1333" class="card-line"/>
+<text x="5270" y="1358" class="field" fill="#0F172A">signature, payload, result (append-only)</text>
+</g>
+<g class="card">
+<rect x="5250" y="1600" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 5266 1600 H 6254 Q 6270 1600 6270 1616 V 1666 H 5250 V 1616 Q 5250 1600 5266 1600 Z" fill="#7E22CE"/>
+<text x="5270" y="1643" class="node-title">withdrawals</text>
+<rect x="6212" y="1616" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="6231" y="1640" text-anchor="middle" font-size="20" font-weight="700" fill="white">T</text>
+<text x="5270" y="1700" class="field" fill="#0F172A">PK id</text>
+<line x1="5264" y1="1711" x2="6256" y2="1711" class="card-line"/>
+<text x="5270" y="1736" class="field" fill="#0F172A">FK tenant/bank/requester/reviewer</text>
+<line x1="5264" y1="1747" x2="6256" y2="1747" class="card-line"/>
+<text x="5270" y="1772" class="field" fill="#0F172A">UQ active tenant, idempotency_key</text>
+<line x1="5264" y1="1783" x2="6256" y2="1783" class="card-line"/>
+<text x="5270" y="1808" class="field" fill="#0F172A">amount, status, transfer snapshot</text>
+</g>
+<g class="card">
+<rect x="5250" y="2050" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 5266 2050 H 6254 Q 6270 2050 6270 2066 V 2116 H 5250 V 2066 Q 5250 2050 5266 2050 Z" fill="#7E22CE"/>
+<text x="5270" y="2093" class="node-title">ledger_entries</text>
+<rect x="6212" y="2066" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="6231" y="2090" text-anchor="middle" font-size="20" font-weight="700" fill="white">M</text>
+<text x="5270" y="2150" class="field" fill="#0F172A">PK id</text>
+<line x1="5264" y1="2161" x2="6256" y2="2161" class="card-line"/>
+<text x="5270" y="2186" class="field" fill="#0F172A">FK tenant/order/payment/withdrawal</text>
+<line x1="5264" y1="2197" x2="6256" y2="2197" class="card-line"/>
+<text x="5270" y="2222" class="field" fill="#0F172A">UQ idempotency_key</text>
+<line x1="5264" y1="2233" x2="6256" y2="2233" class="card-line"/>
+<text x="5270" y="2258" class="field" fill="#0F172A">type, available/held delta (append-only)</text>
+</g>
+<g class="card">
+<rect x="6400" y="300" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 6416 300 H 7404 Q 7420 300 7420 316 V 366 H 6400 V 316 Q 6400 300 6416 300 Z" fill="#4338CA"/>
+<text x="6420" y="343" class="node-title">notification_deliveries</text>
+<rect x="7362" y="316" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="7381" y="340" text-anchor="middle" font-size="20" font-weight="700" fill="white">M</text>
+<text x="6420" y="400" class="field" fill="#0F172A">PK id</text>
+<line x1="6414" y1="411" x2="7406" y2="411" class="card-line"/>
+<text x="6420" y="436" class="field" fill="#0F172A">FK order/session/tenant_order</text>
+<line x1="6414" y1="447" x2="7406" y2="447" class="card-line"/>
+<text x="6420" y="472" class="field" fill="#0F172A">UQ event_key + channel</text>
+<line x1="6414" y1="483" x2="7406" y2="483" class="card-line"/>
+<text x="6420" y="508" class="field" fill="#0F172A">status, attempts, payload</text>
+</g>
+<g class="card">
+<rect x="6400" y="850" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 6416 850 H 7404 Q 7420 850 7420 866 V 916 H 6400 V 866 Q 6400 850 6416 850 Z" fill="#4338CA"/>
+<text x="6420" y="893" class="node-title">outbox_events</text>
+<rect x="7362" y="866" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="7381" y="890" text-anchor="middle" font-size="20" font-weight="700" fill="white">M</text>
+<text x="6420" y="950" class="field" fill="#0F172A">PK id</text>
+<line x1="6414" y1="961" x2="7406" y2="961" class="card-line"/>
+<text x="6420" y="986" class="field" fill="#0F172A">FK tenant_id (nullable)</text>
+<line x1="6414" y1="997" x2="7406" y2="997" class="card-line"/>
+<text x="6420" y="1022" class="field" fill="#0F172A">UQ event_key</text>
+<line x1="6414" y1="1033" x2="7406" y2="1033" class="card-line"/>
+<text x="6420" y="1058" class="field" fill="#0F172A">aggregate/event/payload/published_at</text>
+</g>
+<g class="card">
+<rect x="6400" y="1400" width="1020" height="232" rx="16" fill="white" stroke="#94A3B8" stroke-width="2"/>
+<path d="M 6416 1400 H 7404 Q 7420 1400 7420 1416 V 1466 H 6400 V 1416 Q 6400 1400 6416 1400 Z" fill="#4338CA"/>
+<text x="6420" y="1443" class="node-title">audit_logs</text>
+<rect x="7362" y="1416" width="38" height="34" rx="9" fill="white" fill-opacity="0.22"/>
+<text x="7381" y="1440" text-anchor="middle" font-size="20" font-weight="700" fill="white">M</text>
+<text x="6420" y="1500" class="field" fill="#0F172A">PK id</text>
+<line x1="6414" y1="1511" x2="7406" y2="1511" class="card-line"/>
+<text x="6420" y="1536" class="field" fill="#0F172A">FK actor/canteen/tenant</text>
+<line x1="6414" y1="1547" x2="7406" y2="1547" class="card-line"/>
+<text x="6420" y="1572" class="field" fill="#0F172A">entity, action, request_id</text>
+<line x1="6414" y1="1583" x2="7406" y2="1583" class="card-line"/>
+<text x="6420" y="1608" class="field" fill="#0F172A">before/after/metadata (append-only)</text>
+</g>
+<text x="80" y="2740" font-size="23" font-weight="700" fill="#0F172A">Legenda:</text>
+<text x="200" y="2740" font-size="22" fill="#475569">P = platform-scoped · T = tenant-owned · M = mixed/support · garis 1—N/1 menunjukkan foreign key. Detail kolom, CHECK, indeks, trigger, dan view ada pada skrip SQL.</text>
+</svg>
