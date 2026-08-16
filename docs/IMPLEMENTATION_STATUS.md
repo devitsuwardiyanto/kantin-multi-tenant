@@ -5,8 +5,8 @@ Status kanonik yang dapat dilanjutkan lintas sesi. Ditentukan dari tag/release/e
 | Mg | Status | Branch | Base tag | PR | Merge SHA | Tag | Release | Catatan |
 |---:|---|---|---|---|---|---|---|---|
 | 1 | **LULUS** | `feat/pertemuan-01-setup` (dihapus) | `6da69ca` | [#1](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/1) | `e9ce646` | `pertemuan-01` | [release](https://github.com/devitsuwardiyanto/kantin-multi-tenant/releases/tag/pertemuan-01) | Laravel 13.25 + Livewire 4.1 + Reverb; 33 test di `kantin_test`; Pint/PHPStan/build/audit OK; CI `ci` hijau. Modul revisi v8 dibuat. |
-| 2 | **IN PROGRESS** (gate hijau, menunggu merge) | `feat/pertemuan-02-foundation` | `pertemuan-01` | — | — | — | — | 6 modul `app/Modules/*` + provider; route customer/tenant/admin + middleware `role`; 3 layout + 4 komponen; `users.role/status` + `hasRole()`; 44 test hijau. Binding scoped ditunda M4 (DOC-02-001). |
-| 3 | BELUM | — | — | — | — | — | — | |
+| 2 | **LULUS** | `feat/pertemuan-02-foundation` (dihapus) | `pertemuan-01` | [#3](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/3) | `735fad4` | `pertemuan-02` | [release](https://github.com/devitsuwardiyanto/kantin-multi-tenant/releases/tag/pertemuan-02) | 6 modul + provider; route customer/tenant/admin + `role`; 3 layout + 4 komponen; `users.role/status` + `hasRole()`; 44 test. Binding scoped ditunda M4 (DOC-02-001). |
+| 3 | **IN PROGRESS** (gate hijau, menunggu merge) | `feat/pertemuan-03-database` | `pertemuan-02` | — | — | — | — | 30 tabel baseline (ERD) via 6 migrasi domain; composite FK anti lintas-tenant (1452); 15 model + factory; seeder 2 tenant idempoten; 50 test. migrate/rollback aman. |
 | 4 | BELUM | — | — | — | — | — | — | |
 | 5 | BELUM | — | — | — | — | — | — | |
 | 6 | BELUM | — | — | — | — | — | — | |
