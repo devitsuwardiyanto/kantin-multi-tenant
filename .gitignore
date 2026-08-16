@@ -28,3 +28,6 @@ yarn-error.log
 # Office lock/owner files
 ~$*
 .~lock.*
+
+# Claude Code local settings (keep .claude/skills tracked)
+.claude/settings.local.json
