@@ -28,14 +28,17 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($demo as $row) {
-            // Penetapan atribut langsung: role/status sengaja tidak mass-assignable.
-            $user = User::firstOrNew(['email' => $row['email']]);
-            $user->name = $row['name'];
-            $user->role = $row['role'];
-            $user->status = 'active';
-            $user->password = Hash::make('password');
-            $user->email_verified_at = now();
-            $user->save();
+            // forceFill: role/status sengaja tidak mass-assignable; forceFill melewati
+            // proteksi fillable dan menghindari asignmen properti bertipe langsung.
+            User::firstOrNew(['email' => $row['email']])
+                ->forceFill([
+                    'name' => $row['name'],
+                    'role' => $row['role'],
+                    'status' => 'active',
+                    'password' => Hash::make('password'),
+                    'email_verified_at' => now(),
+                ])
+                ->save();
         }
     }
 }
