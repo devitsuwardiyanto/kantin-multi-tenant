@@ -4,7 +4,7 @@ Status kanonik yang dapat dilanjutkan lintas sesi. Ditentukan dari tag/release/e
 
 | Mg | Status | Branch | Base tag | PR | Merge SHA | Tag | Release | Catatan |
 |---:|---|---|---|---|---|---|---|---|
-| 1 | **IN PROGRESS** | (belum dibuat) | — | — | — | — | — | Audit awal selesai; fondasi repo lokal dibuat; scaffold Laravel belum. Blocker: identitas `GITHUB_REPOSITORY`. |
+| 1 | **IN PROGRESS** (gate hijau, menunggu merge) | `feat/pertemuan-01-setup` | (initial) | (dibuka) | (post-merge) | (post-merge) | (post-merge) | Laravel 13.25 + Livewire 4.1 + Reverb; 33 test hijau di `kantin_test`; Pint/PHPStan/build/audit OK. Repo `devitsuwardiyanto/kantin-multi-tenant` (publik), `main` di-protect. Tag/release dibuat setelah PR merge. |
 | 2 | BELUM | — | — | — | — | — | — | |
 | 3 | BELUM | — | — | — | — | — | — | |
 | 4 | BELUM | — | — | — | — | — | — | |
