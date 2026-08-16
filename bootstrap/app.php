@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,10 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->name('customer.')
                 ->group(base_path('routes/customer.php'));
 
-            // Konteks operator tenant (internal). scopeBindings tenant->child pada Modul 4.
-            Route::middleware(['web', 'auth', 'verified', 'role:tenant'])
-                ->prefix('tenant/{tenant}')
+            // Konteks operator tenant (internal). Resolver mengikat {tenant:slug}, memeriksa
+            // membership + status, lalu mengisi TenantContext. scopeBindings mengunci resource anak
+            // di bawah tenant induk (Modul 4).
+            Route::middleware(['web', 'auth', 'verified', 'tenant'])
+                ->prefix('tenant/{tenant:slug}')
                 ->name('tenant.')
+                ->scopeBindings()
                 ->group(base_path('routes/tenant.php'));
 
             // Konteks pengelola kantin (internal).
@@ -36,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
+            'tenant' => SetTenantContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
