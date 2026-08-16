@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = ['name_snapshot', 'unit_price_snapshot', 'prep_minutes_snapshot', 'quantity', 'modifier_total', 'line_total'];
 
     protected function casts(): array

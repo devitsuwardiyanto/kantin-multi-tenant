@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Canteen;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserTenantRole;
 use App\Modules\Admin\AdminServiceProvider;
 use App\Modules\Catalog\CatalogServiceProvider;
 use App\Modules\Kitchen\KitchenServiceProvider;
@@ -37,10 +40,22 @@ class ModularFoundationTest extends TestCase
         $this->get(route('admin.dashboard'))->assertRedirect(route('login'));
     }
 
-    public function test_tenant_operator_can_open_tenant_dashboard(): void
+    private function tenantWithMember(User $user, string $status = 'active'): Tenant
     {
-        $this->actingAs($this->user('tenant'));
-        $this->get(route('tenant.dashboard', ['tenant' => 'demo']))->assertOk();
+        $canteen = Canteen::factory()->create();
+        $tenant = Tenant::factory()->create(['canteen_id' => $canteen->id, 'status' => $status]);
+        UserTenantRole::create(['user_id' => $user->id, 'tenant_id' => $tenant->id, 'role' => 'operator']);
+
+        return $tenant;
+    }
+
+    public function test_tenant_member_can_open_tenant_dashboard(): void
+    {
+        $user = $this->user('tenant');
+        $this->actingAs($user);
+        $tenant = $this->tenantWithMember($user);
+
+        $this->get(route('tenant.dashboard', ['tenant' => $tenant->slug]))->assertOk();
     }
 
     public function test_admin_can_open_admin_dashboard(): void
@@ -49,27 +64,38 @@ class ModularFoundationTest extends TestCase
         $this->get(route('admin.dashboard'))->assertOk();
     }
 
-    public function test_wrong_role_is_forbidden_not_empty_page(): void
+    public function test_non_member_is_forbidden_on_tenant_and_admin_contexts(): void
     {
-        // operator tenant tidak boleh masuk konteks admin, dan sebaliknya
+        // operator tenant tidak boleh masuk konteks admin
         $this->actingAs($this->user('tenant'));
         $this->get(route('admin.dashboard'))->assertForbidden();
 
-        $this->actingAs($this->user('admin'));
-        $this->get(route('tenant.dashboard', ['tenant' => 'demo']))->assertForbidden();
+        // admin (bukan anggota tenant) tidak boleh masuk dashboard tenant
+        $admin = $this->user('admin');
+        $this->actingAs($admin);
+        $canteen = Canteen::factory()->create();
+        $tenant = Tenant::factory()->create(['canteen_id' => $canteen->id]);
+        $this->get(route('tenant.dashboard', ['tenant' => $tenant->slug]))->assertForbidden();
     }
 
     public function test_user_without_role_is_forbidden_on_internal_contexts(): void
     {
-        $this->actingAs($this->user(null));
-        $this->get(route('tenant.dashboard', ['tenant' => 'demo']))->assertForbidden();
+        $user = $this->user(null);
+        $this->actingAs($user);
         $this->get(route('admin.dashboard'))->assertForbidden();
+
+        $canteen = Canteen::factory()->create();
+        $tenant = Tenant::factory()->create(['canteen_id' => $canteen->id]);
+        $this->get(route('tenant.dashboard', ['tenant' => $tenant->slug]))->assertForbidden();
     }
 
-    public function test_suspended_operator_is_forbidden(): void
+    public function test_suspended_tenant_is_forbidden_even_for_member(): void
     {
-        $this->actingAs($this->user('tenant', status: 'suspended'));
-        $this->get(route('tenant.dashboard', ['tenant' => 'demo']))->assertForbidden();
+        $user = $this->user('tenant');
+        $this->actingAs($user);
+        $tenant = $this->tenantWithMember($user, status: 'suspended');
+
+        $this->get(route('tenant.dashboard', ['tenant' => $tenant->slug]))->assertForbidden();
     }
 
     public function test_all_six_module_providers_are_registered(): void

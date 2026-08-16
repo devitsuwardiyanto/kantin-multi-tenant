@@ -38,9 +38,15 @@ Infrastructure (Eloquent, HTTP, vendor)  ------------------------- |
 | Operator tenant | `routes/tenant.php` | `tenant/{tenant}` | `tenant.*` | `web, auth, verified, role:tenant` |
 | Pengelola kantin | `routes/admin.php` | `admin` | `admin.*` | `web, auth, verified, role:admin` |
 
-Registrasi di `bootstrap/app.php` (`withRouting(then: ...)`). Model binding & `scopeBindings`
-(`{tenant:slug}`, `{canteen:slug}`) **di-wire pada Modul 4** saat model Tenant/Canteen tersedia
-(saat ini parameter berupa string placeholder). Lihat [DOC-02-001](MODULE_REVISION_LOG.md).
+Registrasi di `bootstrap/app.php` (`withRouting(then: ...)`). **Modul 4**: grup tenant memakai
+`tenant/{tenant:slug}` + `scopeBindings()` + resolver `SetTenantContext` (alias `tenant`) — mengikat
+model Tenant, memverifikasi membership + status, mengisi TenantContext. `{canteen:slug}` menyusul Modul 6.
+
+## Isolasi tenant berlapis (Modul 4)
+Empat lapis (lihat [ADR-0008](adr/0008-tenant-isolation.md)): (1) `TenantContext` scoped per request/job;
+(2) global scope + auto-fill via trait `BelongsToTenant`; (3) resolver middleware + membership check;
+(4) policy + scoped route binding. Ditambah composite FK/unique DB (Modul 3). Bypass publik lintas-tenant
+hanya via `PublicCatalogQuery` (`withoutGlobalScope` eksplisit + filter canteen/status). Cross-tenant → 404/403.
 
 ## Authorization (server-side)
 
