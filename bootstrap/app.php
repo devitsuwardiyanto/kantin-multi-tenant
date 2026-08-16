@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\SetTenantContext;
 use App\Support\Routing\PortalRoutes;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function (): void {
             // Route inti tiap portal (dashboard). Route fitur disumbangkan oleh modul lewat
             // app/Modules/{Modul}/routes/{portal}.php memakai grup PortalRoutes yang sama.
-            // Model binding canteen/tenant + scopeBindings di-wire pada Modul 4.
+            // Modul 4: grup tenant mengikat {tenant:slug}, scopeBindings, dan resolver SetTenantContext.
             PortalRoutes::customer(base_path('routes/customer.php'));
             PortalRoutes::tenant(base_path('routes/tenant.php'));
             PortalRoutes::admin(base_path('routes/admin.php'));
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
+            'tenant' => SetTenantContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

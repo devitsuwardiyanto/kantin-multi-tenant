@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\CommissionSchemeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CommissionScheme extends Model
 {
+    use BelongsToTenant;
+
     /** @use HasFactory<CommissionSchemeFactory> */
     use HasFactory;
 

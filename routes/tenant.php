@@ -1,13 +1,12 @@
 <?php
 
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Konteks OPERATOR TENANT (internal). Prefix: tenant/{tenant}, name: tenant.*
- * Grup (prefix/name/middleware auth+verified+role:tenant) didefinisikan tunggal di PortalRoutes::tenant();
- * route fitur ditambahkan oleh modul di app/Modules/{Modul}/routes/tenant.php.
- * Katalog/KDS tenant diisi Modul 7 & 12; scopeBindings pada Modul 4.
+ * Konteks OPERATOR TENANT (internal). Prefix: tenant/{tenant:slug}, name: tenant.*
+ * Grup (middleware auth+verified+tenant/SetTenantContext + scopeBindings) didefinisikan tunggal di
+ * PortalRoutes::tenant(); route fitur ditambahkan modul di app/Modules/{Modul}/routes/tenant.php.
  */
-Route::get('/dashboard', function (string $tenant) {
-    return view('tenant.dashboard', ['tenant' => $tenant]);
-})->name('dashboard');
+Route::get('/dashboard', fn (Tenant $tenant) => view('tenant.dashboard', ['tenant' => $tenant]))
+    ->name('dashboard');
