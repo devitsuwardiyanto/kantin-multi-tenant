@@ -4,7 +4,7 @@ Status kanonik yang dapat dilanjutkan lintas sesi. Ditentukan dari tag/release/e
 
 | Mg | Status | Branch | Base tag | PR | Merge SHA | Tag | Release | Catatan |
 |---:|---|---|---|---|---|---|---|---|
-| 1 | **IN PROGRESS** (gate hijau, menunggu merge) | `feat/pertemuan-01-setup` | (initial) | (dibuka) | (post-merge) | (post-merge) | (post-merge) | Laravel 13.25 + Livewire 4.1 + Reverb; 33 test hijau di `kantin_test`; Pint/PHPStan/build/audit OK. Repo `devitsuwardiyanto/kantin-multi-tenant` (publik), `main` di-protect. Tag/release dibuat setelah PR merge. |
+| 1 | **LULUS** | `feat/pertemuan-01-setup` (dihapus) | `6da69ca` | [#1](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/1) | `e9ce646` | `pertemuan-01` | [release](https://github.com/devitsuwardiyanto/kantin-multi-tenant/releases/tag/pertemuan-01) | Laravel 13.25 + Livewire 4.1 + Reverb; 33 test di `kantin_test`; Pint/PHPStan/build/audit OK; CI `ci` hijau. Modul revisi v8 dibuat. |
 | 2 | BELUM | — | — | — | — | — | — | |
 | 3 | BELUM | — | — | — | — | — | — | |
 | 4 | BELUM | — | — | — | — | — | — | |
