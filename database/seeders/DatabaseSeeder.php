@@ -40,5 +40,7 @@ class DatabaseSeeder extends Seeder
                 ])
                 ->save();
         }
+
+        $this->call(DemoCanteenSeeder::class);
     }
 }
