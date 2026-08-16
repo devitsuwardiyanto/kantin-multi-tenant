@@ -53,15 +53,21 @@ Infrastructure (Eloquent, HTTP, vendor)  ------------------------- |
 | Konteks | File | Prefix | Name | Middleware |
 |---|---|---|---|---|
 | Pelanggan (publik) | `routes/customer.php` + `app/Modules/*/routes/customer.php` | `kantin/{canteen}` | `customer.*` | `web` |
-| Operator tenant | `routes/tenant.php` + `app/Modules/*/routes/tenant.php` | `tenant/{tenant}` | `tenant.*` | `web, auth, verified, role:tenant` |
+| Operator tenant | `routes/tenant.php` + `app/Modules/*/routes/tenant.php` | `tenant/{tenant:slug}` | `tenant.*` | `web, auth, verified, tenant` (SetTenantContext) + `scopeBindings` |
 | Pengelola kantin | `routes/admin.php` + `app/Modules/*/routes/admin.php` | `admin` | `admin.*` | `web, auth, verified, role:admin` |
 
 Grup tiap portal (prefix + name + middleware) didefinisikan **tunggal** di `App\Support\Routing\PortalRoutes`.
 `bootstrap/app.php` (`withRouting(then: ...)`) memakainya untuk route inti portal (dashboard), dan file route
 modul memakainya untuk route fitur — route modul tidak mungkin lupa memasang lapis keamanan portal.
-Test `ModuleConventionTest` menjaga invarian: setiap route `tenant.*`/`admin.*` wajib membawa middleware portalnya. Model binding & `scopeBindings`
-(`{tenant:slug}`, `{canteen:slug}`) **di-wire pada Modul 4** saat model Tenant/Canteen tersedia
-(saat ini parameter berupa string placeholder). Lihat [DOC-02-001](MODULE_REVISION_LOG.md).
+Test `ModuleConventionTest` menjaga invarian: setiap route `tenant.*`/`admin.*` wajib membawa middleware portalnya. **Modul 4**: `PortalRoutes::tenant()` memakai
+`tenant/{tenant:slug}` + `scopeBindings()` + resolver `SetTenantContext` (alias `tenant`) — mengikat
+model Tenant, memverifikasi membership + status, mengisi TenantContext. `{canteen:slug}` menyusul Modul 6.
+
+## Isolasi tenant berlapis (Modul 4)
+Empat lapis (lihat [ADR-0008](adr/0008-tenant-isolation.md)): (1) `TenantContext` scoped per request/job;
+(2) global scope + auto-fill via trait `BelongsToTenant`; (3) resolver middleware + membership check;
+(4) policy + scoped route binding. Ditambah composite FK/unique DB (Modul 3). Bypass publik lintas-tenant
+hanya via `PublicCatalogQuery` (`withoutGlobalScope` eksplisit + filter canteen/status). Cross-tenant → 404/403.
 
 ## Authorization (server-side)
 
