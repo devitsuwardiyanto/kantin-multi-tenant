@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminBankAccountController;
 use App\Http\Controllers\Admin\AdminCommissionController;
+use App\Http\Controllers\Admin\AdminDiningTableController;
 use App\Http\Controllers\Admin\AdminTenantController;
 use App\Http\Controllers\Admin\AdminTenantRoleController;
 use Illuminate\Support\Facades\Route;
@@ -25,3 +26,8 @@ Route::post('/tenants/{tenant}/bank/{account}/primary', [AdminBankAccountControl
 
 Route::post('/tenants/{tenant}/roles', [AdminTenantRoleController::class, 'store'])->name('tenants.roles.store');
 Route::delete('/tenants/{tenant}/roles/{user}', [AdminTenantRoleController::class, 'destroy'])->name('tenants.roles.destroy');
+
+Route::get('/tables', [AdminDiningTableController::class, 'index'])->name('tables.index');
+Route::post('/tables', [AdminDiningTableController::class, 'store'])->name('tables.store');
+Route::post('/tables/{table}/rotate', [AdminDiningTableController::class, 'rotate'])->name('tables.rotate');
+Route::get('/tables/{table}/qr', [AdminDiningTableController::class, 'qr'])->name('tables.qr');
