@@ -1,17 +1,26 @@
-# OS
-.DS_Store
-
-# Env & secrets (never commit real values)
-.env
-.env.*
-!.env.example
-
-# Dependencies & build (reconstructed via composer install / npm ci)
-/vendor
+/.phpunit.cache
 /node_modules
 /public/build
+/public/fonts-manifest.dev.json
 /public/hot
+/public/storage
 /storage/*.key
-
-# Local scratch
-/.phpunit.cache
+/storage/pail
+/vendor
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+.env.testing
+.DS_Store
