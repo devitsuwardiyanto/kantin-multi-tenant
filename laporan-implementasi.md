@@ -26,7 +26,8 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09` | `b16743c` | #17 | 109 |
 | 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10` | `e32e71c` | #19 | 116 |
 | 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11` | `1c1e353` | #21 | 126 |
-| 12–14 | (Kitchen … Rilis) | BELUM | — | — | — | — |
+| 12 | Kitchen Display Realtime, Status, Notifikasi | LULUS | `pertemuan-12` | `dbd632f` | #23 | 133 |
+| 13–14 | (Laporan/Withdrawal … Rilis) | BELUM | — | — | — | — |
 
 PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
@@ -141,6 +142,16 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KEAMANAN/DATA:** signature **HMAC-SHA256 atas RAW BODY** + `hash_equals`, **fail-closed** (tanpa secret/signature → tolak; invalid → 401 tanpa efek samping); **idempoten** dedup `provider_event_id` UNIQUE (replay → 200 duplicate) + `ledger_entries.idempotency_key` UNIQUE (settlement tak dobel); event+lunas+settlement dalam **satu transaksi** (all-or-nothing → provider kirim ulang bila gagal); **split allocation** per tenant (`sale_credit` +subtotal, `commission_debit` −komisi → net ke `available`; pajak/biaya = bagian platform di luar ledger tenant); **ledger append-only** + **reversal** (negasi + CHECK saldo non-negatif = gagal-tertutup bila dana tak cukup); saldo diupdate atomik (`increment`/`decrement`); CSRF dikecualikan `webhooks/*` (keaslian via signature).
 - **REVISI MODUL:** DOC-11-001 (webhook ber-signature HMAC atas raw body + fail-closed; CSRF dikecualikan) · 002 (idempotensi berlapis: dedup event + ledger key; pemrosesan atomik) · 003 (settlement split ke ledger append-only + saldo materialisasi; reversal menggantikan edit historis; output nyata alur webhook in-body).
 - **KETERBATASAN:** settlement kredit langsung ke `available` (siklus `hold`/`release` terikat penyelesaian order = penyempurnaan lanjutan). Reversal gagal-tertutup bila dana telah ditarik (kebijakan clawback di luar lingkup). Penarikan (withdrawal) = Modul 13.
+
+## Pertemuan 12 — Kitchen Display System Realtime, Status, dan Notifikasi · LULUS
+
+- **GIT:** PR #23 · merge `dbd632f` · tag `pertemuan-12` · Release. Docs/output in-body via PR #24.
+- **OUTPUT:** `KitchenService` (mesin status) + event broadcast `TenantOrderStatusChanged`/`NewTenantOrderReceived` + `TenantChannels` (otorisasi channel) + komponen Livewire `kitchen-board` + rute tenant `/kitchen`; `SettlePayment` menyiarkan order baru saat lunas. Live: papan KDS "Ayam Geprek Mantul" — kolom Baru/Diterima/Disiapkan/Siap; satu pesanan maju `Baru → Diterima` (`evidence/pertemuan-12/screenshots/m12-kitchen.png`).
+- **TAHAP:** 7/7 (mesin status + validasi transisi · event broadcast + channel privat · otorisasi keanggotaan channel · komponen KDS Livewire (booted re-verify) · siaran order baru saat settlement · listener Echo + wire:poll fallback · testing & evidence).
+- **VERIFIKASI:** 133 test (363 assertions; **+7** — `KitchenServiceTest` 3, `TenantChannelsTest` 1, `KitchenBoardLivewireTest` 3), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau.
+- **KEAMANAN/DATA:** **state machine** `pending→accepted→preparing→ready→completed` (pending/accepted→cancelled); transisi tak sah **ditolak** (`KitchenException`) · **channel privat** `tenant.{id}.orders` hanya untuk **anggota** (`UserTenantRole`) — cegah kebocoran antrean lintas tenant · KDS Livewire `booted()` **re-verify membership** (non-anggota → **403**) + set `TenantContext` (query ter-scope) · `NewTenantOrderReceived` **ShouldDispatchAfterCommit** (tak ada siaran hantu saat rollback) · perubahan status ter-audit; hanya pesanan berstatus `paid` yang tampil di dapur.
+- **REVISI MODUL:** DOC-12-001 (mesin status tenant_order tervalidasi + audit; transisi tak sah ditolak) · 002 (broadcasting Reverb ke channel privat per tenant + otorisasi keanggotaan; siaran setelah commit) · 003 (KDS Livewire dengan re-verify membership + TenantContext; output nyata papan dapur in-body).
+- **KETERBATASAN:** koneksi Reverb live memerlukan server Reverb berjalan (realtime diverifikasi lewat dispatch event + otorisasi kanal, bukan koneksi WebSocket end-to-end di CI). Notifikasi pelanggan (status siap) dapat memakai channel/notification lanjutan. Rilis `release` held→available terikat penyelesaian pesanan = penyempurnaan lanjutan.
 
 ---
 
