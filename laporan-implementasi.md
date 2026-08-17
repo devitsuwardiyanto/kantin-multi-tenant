@@ -24,7 +24,8 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 7 | Katalog Menu, Modifier, Stok, Public Catalog | LULUS | `pertemuan-07` | `7bae344` | #12 | 84 |
 | 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08` | `0ef56b2` | #15 | 99 |
 | 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09` | `b16743c` | #17 | 109 |
-| 10–14 | (Payment … Rilis) | BELUM | — | — | — | — |
+| 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10` | `e32e71c` | #19 | 116 |
+| 11–14 | (Webhook/Ledger … Rilis) | BELUM | — | — | — | — |
 
 PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
@@ -119,6 +120,16 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KEAMANAN/DATA:** checkout **atomik** (satu transaksi; gagal → rollback, tanpa order parsial); **revalidasi ulang** harga/stok dari DB (bukan nilai keranjang); **idempoten** via `checkout_key` UNIQUE (klik ganda → order sama; balapan `UniqueConstraintViolation` → order eksisting); **stok atomik berpenjaga** (`WHERE stock_qty >= qty`; dua baris menu sama melebihi stok → rollback penuh, stok utuh, 0 order, 0 movement); **komisi effective-dated** di-snapshot (rate + `commission_id`, composite FK `(tenant_id, commission_id)`); TenantContext tidak aktif saat checkout anonim → `tenant_id` eksplisit per baris; harga/nama/prep dibekukan snapshot append-only; **token pelacakan opaque** (hash SHA-256) via cookie HttpOnly, halaman status **404 generik** tanpa token sah.
 - **REVISI MODUL:** DOC-09-001 (checkout menjadi transaksi tunggal atomik + revalidasi ulang; potong stok berpenjaga; idempotensi `checkout_key`) · 002 (komisi/tax/fee di-snapshot per tenant_order; komisi atas subtotal, net = subtotal − komisi; pajak/biaya di luar net tenant) · 003 (pelacakan order via cookie opaque; `order_tracking` dikecualikan dari enkripsi karena token 256-bit hashed; output nyata status pesanan in-body).
 - **KETERBATASAN:** stok yang dipotong bersifat reservasi saat checkout; pelepasan kembali saat batal/kedaluwarsa (reversal) menyusul Modul 10–11 (payment/settlement). Stok modifier belum dipotong (hanya stok menu); pembayaran QRIS = Modul 10.
+
+## Pertemuan 10 — Payment Gateway Contract dan QRIS Dinamis Sandbox · LULUS
+
+- **GIT:** PR #19 · merge `e32e71c` · tag `pertemuan-10` · Release. Docs/output in-body via PR #20.
+- **OUTPUT:** kontrak `PaymentGateway` + DTO `PaymentChargeRequest`/`QrisCharge` + `FakeQrisGateway` (sandbox) + `PaymentService` (initiate/confirmSandbox) + model `Payment`/`PaymentAttempt`/`PaymentEvent`; komponen Livewire `order-payment` + `ResolveTrackedOrder`. Live: order `awaiting_payment` → "Bayar dengan QRIS" → payload EMVCo dinamis (nominal `540517920`, ref `PAY-…`, `Berlaku hingga …`) + tombol "Simulasi Bayar (sandbox)" (`evidence/pertemuan-10/screenshots/m10-qris.png`).
+- **TAHAP:** 7/7 (kontrak gateway bebas provider · FakeQrisGateway + payload EMVCo/CRC16 · model pembayaran · inisiasi idempoten · konfirmasi sandbox + event append-only · UI QRIS Livewire · testing & evidence).
+- **VERIFIKASI:** 116 test (309 assertions; **+7** — `PaymentServiceTest` 4, `FakeQrisGatewayTest` 2 unit, `PaymentLivewireTest` 1), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Bukti (`evidence/pertemuan-10/payment-proof.txt`): provider tunggal `fake-qris-sandbox`, inisiasi idempoten (`payment_count=1`), konfirmasi → payment/order/attempt = paid/success + 1 event `verified`, konfirmasi ulang tetap 1 event.
+- **KEAMANAN/DATA:** **satu provider** di-bind (`PaymentGateway`→`FakeQrisGateway`; ganti provider = tukar binding tunggal, tak memasang banyak provider); **idempoten** satu payment per order (UNIQUE `order_id`+`idempotency_key`; balapan → order eksisting); nominal dari `grand_total` (gateway tak menentukan harga); payload **EMVCo + CRC16-CCITT valid**; `confirmSandbox` menirukan callback sukses + **payment_event append-only** (dedup `provider_event_id`), idempoten via status — **bukan** pengganti webhook produksi; simulasi hanya pada gateway sandbox; pelacakan via cookie opaque (hash), status 404 generik tanpa token.
+- **REVISI MODUL:** DOC-10-001 (kontrak `PaymentGateway` + satu binding provider; sandbox `FakeQrisGateway` menggantikan gateway nyata) · 002 (payload QRIS dinamis EMVCo + CRC16-CCITT; nominal dari order) · 003 (inisiasi idempoten + `payment_event` append-only sebagai fondasi webhook Modul 11; UI QRIS + simulasi sandbox in-body).
+- **KETERBATASAN:** QR **raster** butuh `chillerlan/php-qrcode` (menunggu persetujuan) — payload EMVCo ditampilkan sebagai teks. Kredit saldo tenant (settlement/split/ledger) + **webhook ber-signature idempoten** menyusul Modul 11.
 
 ---
 
