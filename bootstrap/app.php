@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -42,6 +43,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'tenant' => SetTenantContext::class,
         ]);
+
+        // Header keamanan dasar pada seluruh respons (hardening, Modul 14).
+        $middleware->append(SecurityHeaders::class);
 
         // Token pelacakan pesanan = opaque 256-bit (disimpan sebagai hash SHA-256); enkripsi
         // cookie tak menambah kerahasiaan, sedangkan pelacakan stateless butuh nilai stabil.

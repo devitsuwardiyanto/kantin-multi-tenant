@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
-// Webhook pembayaran (di-gate signature HMAC; CSRF dikecualikan di bootstrap/app.php).
-Route::post('/webhooks/qris', QrisWebhookController::class)->name('webhooks.qris');
+// Webhook pembayaran (di-gate signature HMAC; CSRF dikecualikan di bootstrap/app.php; rate limited).
+Route::post('/webhooks/qris', QrisWebhookController::class)
+    ->middleware('throttle:qris-webhook')
+    ->name('webhooks.qris');
 
 // Entry point pelanggan via QR meja. Token opaque di URL; rate limited; canteen dari token.
 Route::get('/q/{token}', ResolveTableQrController::class)
