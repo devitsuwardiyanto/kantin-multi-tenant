@@ -25,7 +25,8 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08` | `0ef56b2` | #15 | 99 |
 | 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09` | `b16743c` | #17 | 109 |
 | 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10` | `e32e71c` | #19 | 116 |
-| 11–14 | (Webhook/Ledger … Rilis) | BELUM | — | — | — | — |
+| 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11` | `1c1e353` | #21 | 126 |
+| 12–14 | (Kitchen … Rilis) | BELUM | — | — | — | — |
 
 PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
@@ -130,6 +131,16 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KEAMANAN/DATA:** **satu provider** di-bind (`PaymentGateway`→`FakeQrisGateway`; ganti provider = tukar binding tunggal, tak memasang banyak provider); **idempoten** satu payment per order (UNIQUE `order_id`+`idempotency_key`; balapan → order eksisting); nominal dari `grand_total` (gateway tak menentukan harga); payload **EMVCo + CRC16-CCITT valid**; `confirmSandbox` menirukan callback sukses + **payment_event append-only** (dedup `provider_event_id`), idempoten via status — **bukan** pengganti webhook produksi; simulasi hanya pada gateway sandbox; pelacakan via cookie opaque (hash), status 404 generik tanpa token.
 - **REVISI MODUL:** DOC-10-001 (kontrak `PaymentGateway` + satu binding provider; sandbox `FakeQrisGateway` menggantikan gateway nyata) · 002 (payload QRIS dinamis EMVCo + CRC16-CCITT; nominal dari order) · 003 (inisiasi idempoten + `payment_event` append-only sebagai fondasi webhook Modul 11; UI QRIS + simulasi sandbox in-body).
 - **KETERBATASAN:** QR **raster** butuh `chillerlan/php-qrcode` (menunggu persetujuan) — payload EMVCo ditampilkan sebagai teks. Kredit saldo tenant (settlement/split/ledger) + **webhook ber-signature idempoten** menyusul Modul 11.
+
+## Pertemuan 11 — Webhook Idempoten, Settlement, Split Allocation, Ledger, dan Reversal · LULUS
+
+- **GIT:** PR #21 · merge `1c1e353` · tag `pertemuan-11` · Release. Docs/output in-body via PR #22.
+- **OUTPUT:** `WebhookSignatureVerifier` + `ProcessPaymentWebhook` + `QrisWebhookController` (route `POST /webhooks/qris`) + `SettlePayment` (settle/reverse) + model `LedgerEntry`; `confirmSandbox` kini menjalankan settlement. Live (HTTP nyata): signature valid → `{"status":"ok"}` 200 + settlement; replay → `{"status":"duplicate"}`; signature salah → `{"status":"invalid_signature"}` 401; ledger `sale_credit +40000` & `commission_debit -6000` → saldo `available=34000` (`evidence/pertemuan-11/screenshots/m11-webhook.png`).
+- **TAHAP:** 7/7 (verifikasi signature raw body · dedup idempoten event · catat event + lunas + settlement atomik · split allocation per tenant · ledger append-only + saldo · reversal · testing & evidence).
+- **VERIFIKASI:** 126 test (345 assertions; **+10** — `WebhookSettlementTest` 5, `SettlePaymentTest` 3, `WebhookSignatureVerifierTest` 2 unit), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Bukti (`evidence/pertemuan-11/webhook-proof.txt`): ok→duplicate→401, `payment=paid`, ledger split, `balance_available=34000`, 1 event `verified`.
+- **KEAMANAN/DATA:** signature **HMAC-SHA256 atas RAW BODY** + `hash_equals`, **fail-closed** (tanpa secret/signature → tolak; invalid → 401 tanpa efek samping); **idempoten** dedup `provider_event_id` UNIQUE (replay → 200 duplicate) + `ledger_entries.idempotency_key` UNIQUE (settlement tak dobel); event+lunas+settlement dalam **satu transaksi** (all-or-nothing → provider kirim ulang bila gagal); **split allocation** per tenant (`sale_credit` +subtotal, `commission_debit` −komisi → net ke `available`; pajak/biaya = bagian platform di luar ledger tenant); **ledger append-only** + **reversal** (negasi + CHECK saldo non-negatif = gagal-tertutup bila dana tak cukup); saldo diupdate atomik (`increment`/`decrement`); CSRF dikecualikan `webhooks/*` (keaslian via signature).
+- **REVISI MODUL:** DOC-11-001 (webhook ber-signature HMAC atas raw body + fail-closed; CSRF dikecualikan) · 002 (idempotensi berlapis: dedup event + ledger key; pemrosesan atomik) · 003 (settlement split ke ledger append-only + saldo materialisasi; reversal menggantikan edit historis; output nyata alur webhook in-body).
+- **KETERBATASAN:** settlement kredit langsung ke `available` (siklus `hold`/`release` terikat penyelesaian order = penyempurnaan lanjutan). Reversal gagal-tertutup bila dana telah ditarik (kebijakan clawback di luar lingkup). Penarikan (withdrawal) = Modul 13.
 
 ---
 
