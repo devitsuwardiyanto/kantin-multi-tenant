@@ -15,3 +15,5 @@ Route::get('/dashboard', fn (Tenant $tenant) => view('tenant.dashboard', ['tenan
 Route::get('/menus', [TenantMenuController::class, 'index'])->name('menus.index');
 Route::get('/menus/{menu}', [TenantMenuController::class, 'show'])->name('menus.show');
 Route::patch('/menus/{menu}', [TenantMenuController::class, 'update'])->name('menus.update');
+
+Route::get('/menu-manager', fn (Tenant $tenant) => view('tenant.menu-manager', ['tenant' => $tenant]))->name('menu-manager');
