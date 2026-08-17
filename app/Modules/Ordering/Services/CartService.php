@@ -178,6 +178,7 @@ final class CartService
             ? collect()
             : ModifierOption::query()
                 ->withoutGlobalScope('tenant')
+                ->with('group:id,name')
                 ->where('tenant_id', $menu->tenant_id)
                 ->whereIn('id', $modifierIds)
                 ->get();
@@ -212,8 +213,11 @@ final class CartService
             quantity: $quantity,
             unitPrice: $unitPrice,
             priceAtAdd: (int) $item['price_at_add'],
+            prepMinutes: (int) ($menu->prep_minutes ?? 0),
             modifiers: array_values($options->map(fn (ModifierOption $o): array => [
                 'id' => $o->id,
+                'group_id' => (int) $o->group_id,
+                'group_name' => (string) $o->group->name,
                 'name' => (string) $o->name,
                 'price_delta' => (int) $o->price_delta,
             ])->all()),

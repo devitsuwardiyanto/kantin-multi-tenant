@@ -42,6 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'tenant' => SetTenantContext::class,
         ]);
+
+        // Token pelacakan pesanan = opaque 256-bit (disimpan sebagai hash SHA-256); enkripsi
+        // cookie tak menambah kerahasiaan, sedangkan pelacakan stateless butuh nilai stabil.
+        $middleware->encryptCookies(except: ['order_tracking']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -3,8 +3,12 @@
 use App\Models\CustomerSession;
 use App\Modules\Ordering\Data\CartView;
 use App\Modules\Ordering\Exceptions\CartException;
+use App\Modules\Ordering\Exceptions\CheckoutException;
 use App\Modules\Ordering\Services\CartService;
+use App\Modules\Ordering\Services\CheckoutService;
 use App\Modules\Ordering\Services\ResolveCustomerSession;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -18,9 +22,13 @@ new class extends Component
 {
     public string $canteenSlug = '';
 
+    /** Idempotency stabil per muat komponen: klik ganda tak membuat order dobel. */
+    public string $idempotencyKey = '';
+
     public function mount(string $canteenSlug): void
     {
         $this->canteenSlug = $canteenSlug;
+        $this->idempotencyKey = (string) Str::uuid();
     }
 
     private function session(): ?CustomerSession
@@ -90,6 +98,43 @@ new class extends Component
         app(CartService::class)->remove($session, $lineKey);
         unset($this->cart);
     }
+
+    /**
+     * Checkout atomik: buat order dari keranjang, pasang cookie pelacakan (opaque),
+     * lalu arahkan ke halaman status. Idempoten via idempotencyKey.
+     */
+    public function checkout()
+    {
+        $session = $this->session();
+        if ($session === null) {
+            return null;
+        }
+
+        try {
+            $result = app(CheckoutService::class)->checkout($session, $this->idempotencyKey);
+        } catch (CheckoutException $e) {
+            unset($this->cart);
+            $this->addError('cart', $e->getMessage());
+
+            return null;
+        }
+
+        if ($result->trackingToken !== null) {
+            Cookie::queue(cookie(
+                name: 'order_tracking',
+                value: $result->trackingToken,
+                minutes: 240,
+                path: '/',
+                domain: null,
+                secure: request()->isSecure() || app()->isProduction(),
+                httpOnly: true,
+                raw: false,
+                sameSite: 'lax',
+            ));
+        }
+
+        return $this->redirectRoute('customer.order.show', ['canteen' => $this->canteenSlug], navigate: false);
+    }
 };
 ?>
 
@@ -153,7 +198,7 @@ new class extends Component
             <p class="mt-2 text-xs text-red-600">Perbaiki item bermasalah sebelum melanjutkan.</p>
         @endif
 
-        <button type="button" @disabled(! $this->cart->isOrderable())
+        <button type="button" wire:click="checkout" wire:loading.attr="disabled" @disabled(! $this->cart->isOrderable())
             class="mt-3 min-h-11 w-full rounded-xl bg-zinc-900 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900">
             Lanjut ke Pembayaran
         </button>
