@@ -34,6 +34,15 @@ new class extends Component
         $this->resetPage();
     }
 
+    /**
+     * Meneruskan permintaan tambah ke komponen keranjang (yang memegang sesi tepercaya).
+     * Katalog sendiri anonim; ia tidak menyimpan/menentukan harga.
+     */
+    public function add(int $menuId): void
+    {
+        $this->dispatch('cart-add', menuId: $menuId);
+    }
+
     #[Computed]
     public function canteen(): ?Canteen
     {
@@ -85,6 +94,10 @@ new class extends Component
                     </div>
                     <p class="shrink-0 font-semibold">Rp {{ number_format($menu->base_price, 0, ',', '.') }}</p>
                 </div>
+                <button type="button" wire:click="add({{ $menu->id }})"
+                    class="mt-2 min-h-9 rounded-lg border border-zinc-300 px-3 text-sm font-medium dark:border-zinc-600">
+                    + Tambah
+                </button>
             </div>
         @empty
             <x-empty-state title="Belum ada menu" description="Tidak ada menu tersedia untuk filter ini." />
