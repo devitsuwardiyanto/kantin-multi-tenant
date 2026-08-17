@@ -27,7 +27,8 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10` | `e32e71c` | #19 | 116 |
 | 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11` | `1c1e353` | #21 | 126 |
 | 12 | Kitchen Display Realtime, Status, Notifikasi | LULUS | `pertemuan-12` | `dbd632f` | #23 | 133 |
-| 13–14 | (Laporan/Withdrawal … Rilis) | BELUM | — | — | — | — |
+| 13 | Laporan, Rekonsiliasi, Ekspor, Withdrawal | LULUS | `pertemuan-13` | `dc450ef` | #25 | 144 |
+| 14 | (Hardening, E2E, Deployment, Demo) | BELUM | — | — | — | — |
 
 PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
@@ -152,6 +153,16 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KEAMANAN/DATA:** **state machine** `pending→accepted→preparing→ready→completed` (pending/accepted→cancelled); transisi tak sah **ditolak** (`KitchenException`) · **channel privat** `tenant.{id}.orders` hanya untuk **anggota** (`UserTenantRole`) — cegah kebocoran antrean lintas tenant · KDS Livewire `booted()` **re-verify membership** (non-anggota → **403**) + set `TenantContext` (query ter-scope) · `NewTenantOrderReceived` **ShouldDispatchAfterCommit** (tak ada siaran hantu saat rollback) · perubahan status ter-audit; hanya pesanan berstatus `paid` yang tampil di dapur.
 - **REVISI MODUL:** DOC-12-001 (mesin status tenant_order tervalidasi + audit; transisi tak sah ditolak) · 002 (broadcasting Reverb ke channel privat per tenant + otorisasi keanggotaan; siaran setelah commit) · 003 (KDS Livewire dengan re-verify membership + TenantContext; output nyata papan dapur in-body).
 - **KETERBATASAN:** koneksi Reverb live memerlukan server Reverb berjalan (realtime diverifikasi lewat dispatch event + otorisasi kanal, bukan koneksi WebSocket end-to-end di CI). Notifikasi pelanggan (status siap) dapat memakai channel/notification lanjutan. Rilis `release` held→available terikat penyelesaian pesanan = penyempurnaan lanjutan.
+
+## Pertemuan 13 — Laporan, Rekonsiliasi, Ekspor, dan Withdrawal · LULUS
+
+- **GIT:** PR #25 · merge `dc450ef` · tag `pertemuan-13` · Release. Docs/output in-body via PR #26.
+- **OUTPUT:** `TenantLedgerReport` (summary/reconcile/rows) + `WithdrawalService` (request/approve/reject) + `TenantLedgerExportController` (CSV); Livewire `finance-panel` (tenant) + `withdrawal-review` (admin); rute tenant `/finance` & `/finance/ledger.csv`, admin `/withdrawals`. Live: panel keuangan "Ayam Geprek Mantul" — Saldo Rp 42.500, Penjualan Kotor Rp 50.000, Komisi Rp 7.500, **Rekonsiliasi "cocok"**, form penarikan + ekspor CSV (`evidence/pertemuan-13/screenshots/m13-finance.png`).
+- **TAHAP:** 7/7 (laporan dari ledger · rekonsiliasi saldo vs ledger · ekspor CSV · withdrawal hold · approve/reject (debit/release) + satu aktif per tenant · UI tenant/admin · testing & evidence).
+- **VERIFIKASI:** 144 test (399 assertions; **+11** — `WithdrawalServiceTest` 5, `TenantLedgerReportTest` 2, `FinanceFlowTest` 4), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Rekonsiliasi terbukti cocok sebelum & sesudah penarikan (ledger = saldo).
+- **KEAMANAN/DATA:** withdrawal **atomik** berbasis ledger — `request` (`available→held` via `hold`) + **satu penarikan aktif per tenant** (UNIQUE `active_tenant_lock`; balapan → ditolak), `approve` (`withdrawal_debit`, held keluar), `reject` (`release`, held→available); validasi nominal>0 & ≤ saldo & rekening **verified** milik tenant; saldo dimutasi bersama ledger, **CHECK non-negatif** gagal-tertutup; **rekonsiliasi** membuktikan saldo materialisasi == akumulasi ledger; ekspor CSV memakai `tenant_id` dari **TenantContext** (cegah ekspor lintas tenant); `finance-panel` re-verify membership (**403** non-anggota); `withdrawal-review` hanya penarikan tenant **kantin yang dikelola** (aksi lintas kantin → **403**).
+- **REVISI MODUL:** DOC-13-001 (laporan & rekonsiliasi diturunkan dari ledger append-only sebagai sumber kebenaran; saldo = materialisasi) · 002 (withdrawal siklus hold→debit/release memakai ledger types; satu aktif per tenant via active_tenant_lock) · 003 (ekspor CSV ter-scope tenant; UI tenant/admin dengan otorisasi berlapis; output nyata panel keuangan in-body).
+- **KETERBATASAN:** reject/refund gagal-tertutup bila dana telah ditarik (kebijakan clawback di luar lingkup). Transfer bank nyata (disbursement) di luar lingkup (status `paid` menandai persetujuan pencairan; integrasi payout provider = pekerjaan lanjutan).
 
 ---
 
