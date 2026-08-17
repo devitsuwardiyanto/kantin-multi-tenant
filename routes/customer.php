@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Customer\OrderStatusController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -9,3 +10,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function (string $canteen) {
     return view('customer.home', ['canteen' => $canteen]);
 })->name('home');
+
+// Status pesanan pasca-checkout (dikenali via cookie pelacakan opaque).
+Route::get('/order', OrderStatusController::class)->name('order.show');
