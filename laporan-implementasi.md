@@ -28,7 +28,7 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11` | `1c1e353` | #21 | 126 |
 | 12 | Kitchen Display Realtime, Status, Notifikasi | LULUS | `pertemuan-12` | `dbd632f` | #23 | 133 |
 | 13 | Laporan, Rekonsiliasi, Ekspor, Withdrawal | LULUS | `pertemuan-13` | `dc450ef` | #25 | 144 |
-| 14 | (Hardening, E2E, Deployment, Demo) | BELUM | — | — | — | — |
+| 14 | Hardening, Pengujian E2E, Deployment, Demo | LULUS | `pertemuan-14` | `2ef4850` | #27 | 146 |
 
 PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
@@ -163,6 +163,18 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KEAMANAN/DATA:** withdrawal **atomik** berbasis ledger — `request` (`available→held` via `hold`) + **satu penarikan aktif per tenant** (UNIQUE `active_tenant_lock`; balapan → ditolak), `approve` (`withdrawal_debit`, held keluar), `reject` (`release`, held→available); validasi nominal>0 & ≤ saldo & rekening **verified** milik tenant; saldo dimutasi bersama ledger, **CHECK non-negatif** gagal-tertutup; **rekonsiliasi** membuktikan saldo materialisasi == akumulasi ledger; ekspor CSV memakai `tenant_id` dari **TenantContext** (cegah ekspor lintas tenant); `finance-panel` re-verify membership (**403** non-anggota); `withdrawal-review` hanya penarikan tenant **kantin yang dikelola** (aksi lintas kantin → **403**).
 - **REVISI MODUL:** DOC-13-001 (laporan & rekonsiliasi diturunkan dari ledger append-only sebagai sumber kebenaran; saldo = materialisasi) · 002 (withdrawal siklus hold→debit/release memakai ledger types; satu aktif per tenant via active_tenant_lock) · 003 (ekspor CSV ter-scope tenant; UI tenant/admin dengan otorisasi berlapis; output nyata panel keuangan in-body).
 - **KETERBATASAN:** reject/refund gagal-tertutup bila dana telah ditarik (kebijakan clawback di luar lingkup). Transfer bank nyata (disbursement) di luar lingkup (status `paid` menandai persetujuan pencairan; integrasi payout provider = pekerjaan lanjutan).
+
+## Pertemuan 14 — Hardening, Pengujian End-to-End, Deployment, dan Demo · LULUS (PENUTUP)
+
+- **GIT:** PR #27 · merge `2ef4850` · tag `pertemuan-14` · Release. Docs/output in-body via PR #28. **14/14 pertemuan LULUS — `main` = rilis final.**
+- **OUTPUT:** `SecurityHeaders` middleware (global) + rate limit webhook (`throttle:qris-webhook`); `EndToEndJourneyTest` (capstone lintas modul); `docs/DEPLOYMENT.md` + `docs/DEMO.md`. Bukti: 146 test hijau + header keamanan pada respons HTTP (`evidence/pertemuan-14/screenshots/m14-capstone.png`).
+- **TAHAP:** 7/7 (audit keamanan · header keamanan global · rate limit webhook · uji E2E capstone · checklist deployment · skrip demo · finalisasi dokumentasi).
+- **VERIFIKASI:** 146 test (423 assertions; **+2** — `EndToEndJourneyTest` 1, `SecurityHeadersTest` 1), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. E2E capstone menempuh scan→keranjang→checkout→webhook HMAC→settlement→dapur→rekonsiliasi cocok→penarikan (tahan→cair), invarian terverifikasi ujung-ke-ujung.
+- **KEAMANAN/DATA:** header keamanan global (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `X-Permitted-Cross-Domain-Policies: none`, `Permissions-Policy`) — terbukti via HTTP; **rate limit** webhook melengkapi signature HMAC + dedup; rangkuman kontrol yang telah tertanam: isolasi tenant berlapis (context/scope/policy/composite FK), uang integer, event/ledger append-only + reversal, CHECK non-negatif, idempotensi berlapis, cookie HttpOnly/Secure-prod, `prohibitDestructiveCommands` + password kuat di produksi, tanpa FLUSHDB pada Redis bersama.
+- **REVISI MODUL:** DOC-14-001 (header keamanan global + rate limit webhook sebagai hardening baku) · 002 (uji E2E capstone lintas modul sebagai bukti invarian ujung-ke-ujung) · 003 (checklist deployment + skrip demo; output nyata ringkasan capstone in-body).
+- **KETERBATASAN:** pemindaian keamanan otomatis (DAST/pentest) & uji beban di luar lingkup; CSP ketat tidak dipasang (menghindari benturan aset Vite/inline) — dapat ditambah bertahap; koneksi Reverb/queue live perlu proses berjalan di produksi.
+
+**Penutup.** Seluruh 14 pertemuan direalisasikan sebagai satu codebase kumulatif dengan tag & Release per pertemuan (`pertemuan-01`…`pertemuan-14`), CI hijau, dan output nyata in-body pada dokumen modul v8.
 
 ---
 
