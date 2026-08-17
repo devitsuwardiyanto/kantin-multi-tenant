@@ -41,6 +41,9 @@ class AppServiceProvider extends ServiceProvider
     protected function configureRateLimiters(): void
     {
         RateLimiter::for('qr-scan', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip() ?? 'unknown'));
+
+        // Webhook pembayaran: batasi laju per IP (dedup + signature tetap lapis utama).
+        RateLimiter::for('qris-webhook', fn (Request $request): Limit => Limit::perMinute(120)->by($request->ip() ?? 'unknown'));
     }
 
     /**
