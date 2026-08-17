@@ -22,10 +22,10 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 5 | Administrasi Kantin, Tenant, Role, Komisi | LULUS | `pertemuan-05` | `6d17ab8` | #7 | 69 |
 | 6 | Meja, QR Token Opaque, Sesi Anonim | LULUS | `pertemuan-06` | `5e12aa9` | #10 | 77 |
 | 7 | Katalog Menu, Modifier, Stok, Public Catalog | LULUS | `pertemuan-07` | `7bae344` | #12 | 84 |
-| 8 | Keranjang Redis & Revalidasi Harga/Stok | BELUM | — | — | — | — |
+| 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08` | `0ef56b2` | #15 | 99 |
 | 9–14 | (Checkout … Rilis) | BELUM | — | — | — | — |
 
-PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13 (revisi & output in-body DOCX v8).
+PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
 Toolchain terverifikasi: PHP 8.3.20 · Composer 2.7.1 · Node 22.14 · MariaDB 11.4.5 · Redis 7.2.6 ·
 Laravel 13.25.0 · Livewire 4.
@@ -98,6 +98,16 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **VERIFIKASI:** 84 test (7 baru via `Livewire::test`); CI hijau; **anti-N+1** (≤6 query/20 menu).
 - **KEAMANAN/DATA:** public catalog tanpa bocor lintas-canteen; unavailable/out-of-stock tersembunyi; menu `tenant_id` dari context; **Livewire manager `booted()` re-verify membership + set TenantContext tiap request** (tampering non-anggota → **403**); modifier lintas-tenant ditolak composite FK; stok atomik+auditable; bypass scope terkontrol.
 - **REVISI MODUL:** DOC-07-001 (foto WebP `intervention/image` **ditunda**) · 002 (trap Livewire+TenantContext → `booted()` re-verify) · 003 (Livewire SFC).
+
+## Pertemuan 08 — Keranjang Redis per Sesi dan Revalidasi Harga/Stok · LULUS
+
+- **GIT:** PR #15 · merge `0ef56b2` · tag `pertemuan-08` · Release. Docs/output in-body via PR #16.
+- **OUTPUT:** `CartService` (Redis) + `ResolveCustomerSession` + DTO `CartView`/`CartLine`; komponen Livewire keranjang + tombol "Tambah" pada katalog (event `cart-add`). Live: scan `/q/<token>` → katalog `kantin-pusat`; tambah 2×Rp16.000 + 1×Rp15.000 → **Subtotal Rp 47.000** (lihat `evidence/pertemuan-08/screenshots/m8-cart.png`).
+- **TAHAP:** 7/7 (model penyimpanan Redis per sesi · add/merge + batas · setQuantity/remove/clear · revalidasi harga/stok/ketersediaan · resolver sesi tepercaya · komponen Livewire + wiring katalog · testing & evidence).
+- **VERIFIKASI:** 99 test (235 assertions; **+15** — `CartServiceTest` 9, `CartLivewireTest` 4, `ResolveCustomerSessionTest` 2), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Bukti Redis: key `cart:<ulid>` ada, `TTL≈14400s`, subtotal ikut harga DB (20000→26000 saat harga naik), `clear` menghapus key (`evidence/pertemuan-08/redis-revalidation.txt`).
+- **KEAMANAN/DATA:** keranjang **di-key per sesi pelanggan** (ULID dari cookie HttpOnly ter-hash, bukan input klien); Redis hanya menyimpan **identitas + kuantitas** — **harga & stok selalu dihitung ulang dari DB** di `view()` (keranjang tak pernah menentukan harga); menu wajib milik **tenant AKTIF** canteen sesi (injeksi menu lintas-canteen/tenant ditolak di `add()`); modifier lintas-tenant ditolak; hanya `SETEX`/`DEL` **satu key** milik sesi + TTL selaras sesi (**tanpa FLUSHDB**); isolasi antar sesi terbukti (keranjang tak bocor); revalidasi menandai `menu_unavailable`/`insufficient_stock`/`modifier_unavailable`/`price_changed`, subtotal hanya baris `available`, `isOrderable()` menutup checkout bila bermasalah.
+- **REVISI MODUL:** DOC-08-001 (keranjang berbasis Redis per sesi menggantikan asumsi session/DB — key ter-scope, TTL selaras sesi, tanpa flush global) · 002 (revalidasi harga/stok dari DB sebagai satu-satunya otoritas; keranjang menyimpan identitas saja) · 003 (event Livewire `cart-add` lintas-komponen; output nyata keranjang in-body).
+- **KETERBATASAN:** pelekatan grup modifier ke menu (pivot `menu_modifier_groups`) belum divalidasi di `add()` — validasi kini pada level tenant + ketersediaan; dikencangkan saat UI attach modifier dibangun. Checkout (harga final, pajak/fee, `orders`/`tenant_orders`) menyusul Pertemuan 9.
 
 ---
 
