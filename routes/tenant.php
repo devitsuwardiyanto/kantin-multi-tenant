@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Tenant\TenantLedgerExportController;
 use App\Http\Controllers\Tenant\TenantMenuController;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Route;
@@ -19,3 +20,6 @@ Route::patch('/menus/{menu}', [TenantMenuController::class, 'update'])->name('me
 Route::get('/menu-manager', fn (Tenant $tenant) => view('tenant.menu-manager', ['tenant' => $tenant]))->name('menu-manager');
 
 Route::get('/kitchen', fn (Tenant $tenant) => view('tenant.kitchen', ['tenant' => $tenant]))->name('kitchen');
+
+Route::get('/finance', fn (Tenant $tenant) => view('tenant.finance', ['tenant' => $tenant]))->name('finance');
+Route::get('/finance/ledger.csv', TenantLedgerExportController::class)->name('finance.export');

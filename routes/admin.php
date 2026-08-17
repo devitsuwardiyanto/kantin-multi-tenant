@@ -27,6 +27,8 @@ Route::post('/tenants/{tenant}/bank/{account}/primary', [AdminBankAccountControl
 Route::post('/tenants/{tenant}/roles', [AdminTenantRoleController::class, 'store'])->name('tenants.roles.store');
 Route::delete('/tenants/{tenant}/roles/{user}', [AdminTenantRoleController::class, 'destroy'])->name('tenants.roles.destroy');
 
+Route::get('/withdrawals', fn () => view('admin.withdrawals'))->name('withdrawals.index');
+
 Route::get('/tables', [AdminDiningTableController::class, 'index'])->name('tables.index');
 Route::post('/tables', [AdminDiningTableController::class, 'store'])->name('tables.store');
 Route::post('/tables/{table}/rotate', [AdminDiningTableController::class, 'rotate'])->name('tables.rotate');
