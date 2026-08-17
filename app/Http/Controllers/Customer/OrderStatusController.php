@@ -3,32 +3,26 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Support\Tokens\OpaqueToken;
+use App\Modules\Ordering\Services\ResolveTrackedOrder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 /**
  * Halaman status pesanan untuk pelanggan anonim. Order dikenali lewat cookie pelacakan
- * (opaque, HttpOnly) — di-hash lalu dicari. Tanpa/ salah token → 404 generik (anti-enumeration).
+ * (opaque, HttpOnly). Tanpa/ salah token → 404 generik (anti-enumeration).
  */
 final class OrderStatusController extends Controller
 {
-    public function __invoke(Request $request, string $canteen): View
+    public function __invoke(Request $request, string $canteen, ResolveTrackedOrder $resolver): View
     {
-        $token = $request->cookie('order_tracking');
-        abort_if(! is_string($token) || $token === '', 404);
-
-        $order = Order::query()
-            ->where('tracking_token_hash', OpaqueToken::hash($token))
-            ->with([
-                'tenantOrders.tenant:id,display_name',
-                'tenantOrders.items',
-                'tenantOrders.items.modifiers',
-            ])
-            ->first();
-
+        $order = $resolver->current($request);
         abort_if($order === null, 404);
+
+        $order->load([
+            'tenantOrders.tenant:id,display_name',
+            'tenantOrders.items',
+            'tenantOrders.items.modifiers',
+        ]);
 
         return view('customer.order', ['order' => $order]);
     }
