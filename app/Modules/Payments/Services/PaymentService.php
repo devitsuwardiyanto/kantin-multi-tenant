@@ -27,6 +27,7 @@ final class PaymentService
     public function __construct(
         private PaymentGateway $gateway,
         private AuditLogger $audit,
+        private SettlePayment $settle,
     ) {}
 
     /**
@@ -133,6 +134,9 @@ final class PaymentService
             $this->audit->record('payment', $payment->id, 'paid_sandbox', null, [
                 'amount' => $payment->amount,
             ], null, null);
+
+            // Settlement (split allocation → ledger + saldo) — idempoten via ledger key.
+            $this->settle->settle($payment);
         });
 
         return $payment;

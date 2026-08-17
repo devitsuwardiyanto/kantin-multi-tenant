@@ -46,6 +46,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Token pelacakan pesanan = opaque 256-bit (disimpan sebagai hash SHA-256); enkripsi
         // cookie tak menambah kerahasiaan, sedangkan pelacakan stateless butuh nilai stabil.
         $middleware->encryptCookies(except: ['order_tracking']);
+
+        // Webhook provider tak mengirim token CSRF; keaslian dijamin signature HMAC atas raw body.
+        $middleware->validateCsrfTokens(except: ['webhooks/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
