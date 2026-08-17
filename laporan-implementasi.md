@@ -23,7 +23,8 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 6 | Meja, QR Token Opaque, Sesi Anonim | LULUS | `pertemuan-06` | `5e12aa9` | #10 | 77 |
 | 7 | Katalog Menu, Modifier, Stok, Public Catalog | LULUS | `pertemuan-07` | `7bae344` | #12 | 84 |
 | 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08` | `0ef56b2` | #15 | 99 |
-| 9–14 | (Checkout … Rilis) | BELUM | — | — | — | — |
+| 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09` | `b16743c` | #17 | 109 |
+| 10–14 | (Payment … Rilis) | BELUM | — | — | — | — |
 
 PR pendukung: #9 (integrasi Laravel Boost), #2/#6/#8/#11/#13/#16 (revisi & output in-body DOCX v8).
 
@@ -108,6 +109,16 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KEAMANAN/DATA:** keranjang **di-key per sesi pelanggan** (ULID dari cookie HttpOnly ter-hash, bukan input klien); Redis hanya menyimpan **identitas + kuantitas** — **harga & stok selalu dihitung ulang dari DB** di `view()` (keranjang tak pernah menentukan harga); menu wajib milik **tenant AKTIF** canteen sesi (injeksi menu lintas-canteen/tenant ditolak di `add()`); modifier lintas-tenant ditolak; hanya `SETEX`/`DEL` **satu key** milik sesi + TTL selaras sesi (**tanpa FLUSHDB**); isolasi antar sesi terbukti (keranjang tak bocor); revalidasi menandai `menu_unavailable`/`insufficient_stock`/`modifier_unavailable`/`price_changed`, subtotal hanya baris `available`, `isOrderable()` menutup checkout bila bermasalah.
 - **REVISI MODUL:** DOC-08-001 (keranjang berbasis Redis per sesi menggantikan asumsi session/DB — key ter-scope, TTL selaras sesi, tanpa flush global) · 002 (revalidasi harga/stok dari DB sebagai satu-satunya otoritas; keranjang menyimpan identitas saja) · 003 (event Livewire `cart-add` lintas-komponen; output nyata keranjang in-body).
 - **KETERBATASAN:** pelekatan grup modifier ke menu (pivot `menu_modifier_groups`) belum divalidasi di `add()` — validasi kini pada level tenant + ketersediaan; dikencangkan saat UI attach modifier dibangun. Checkout (harga final, pajak/fee, `orders`/`tenant_orders`) menyusul Pertemuan 9.
+
+## Pertemuan 09 — Checkout Atomik, Order Induk, Snapshot, dan Pre-Order · LULUS
+
+- **GIT:** PR #17 · merge `b16743c` · tag `pertemuan-09` · Release. Docs/output in-body via PR #18.
+- **OUTPUT:** `CheckoutService` (keranjang→order atomik) + `OrderStatusController` (halaman status publik) + DTO `CheckoutResult` + model `OrderItemModifier`; tombol checkout keranjang + cookie pelacakan. Live: scan `/q/<token>` → tambah item → checkout → **ORD-…** status `awaiting_payment`, split 2 tenant (Ayam Geprek + Kopi Kita), Subtotal Rp 47.000 + Pajak Rp 4.700 + Biaya Rp 940 = **Total Rp 52.640** (`evidence/pertemuan-09/screenshots/m9-order.png`).
+- **TAHAP:** 7/7 (revalidasi ulang keranjang · order induk + snapshot · split per-tenant + snapshot komisi · potong stok atomik + idempotensi · pre-order `scheduled_at` · halaman status + pelacakan opaque · testing & evidence).
+- **VERIFIKASI:** 109 test (279 assertions; **+10** — `CheckoutServiceTest` 7, `OrderCheckoutFlowTest` 3), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Bukti (`evidence/pertemuan-09/checkout-proof.txt`): split 2 tenant (komisi 15%/20%), total 78400, stok 10→8 & 10→9, idempoten `order_count=1`+replay.
+- **KEAMANAN/DATA:** checkout **atomik** (satu transaksi; gagal → rollback, tanpa order parsial); **revalidasi ulang** harga/stok dari DB (bukan nilai keranjang); **idempoten** via `checkout_key` UNIQUE (klik ganda → order sama; balapan `UniqueConstraintViolation` → order eksisting); **stok atomik berpenjaga** (`WHERE stock_qty >= qty`; dua baris menu sama melebihi stok → rollback penuh, stok utuh, 0 order, 0 movement); **komisi effective-dated** di-snapshot (rate + `commission_id`, composite FK `(tenant_id, commission_id)`); TenantContext tidak aktif saat checkout anonim → `tenant_id` eksplisit per baris; harga/nama/prep dibekukan snapshot append-only; **token pelacakan opaque** (hash SHA-256) via cookie HttpOnly, halaman status **404 generik** tanpa token sah.
+- **REVISI MODUL:** DOC-09-001 (checkout menjadi transaksi tunggal atomik + revalidasi ulang; potong stok berpenjaga; idempotensi `checkout_key`) · 002 (komisi/tax/fee di-snapshot per tenant_order; komisi atas subtotal, net = subtotal − komisi; pajak/biaya di luar net tenant) · 003 (pelacakan order via cookie opaque; `order_tracking` dikecualikan dari enkripsi karena token 256-bit hashed; output nyata status pesanan in-body).
+- **KETERBATASAN:** stok yang dipotong bersifat reservasi saat checkout; pelepasan kembali saat batal/kedaluwarsa (reversal) menyusul Modul 10–11 (payment/settlement). Stok modifier belum dipotong (hanya stok menu); pembayaran QRIS = Modul 10.
 
 ---
 
