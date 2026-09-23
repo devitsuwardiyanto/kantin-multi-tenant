@@ -30,8 +30,9 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08`* | `57ac4ca` | #36 | 109 |
 | 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09`* | `4f3ae95` | #37 | 120 |
 | 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10`* | `383b50a` | #38 | 127 |
-| 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11`* | (PR ini) | #39 | 139 |
-| 12–14 | (Kitchen … Rilis) | BELUM | — | — | — | — |
+| 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11`* | `db0cee4` | #39, #40 | 139 |
+| 12 | Kitchen Display Realtime, Status, Notifikasi | LULUS | `pertemuan-12`* | (PR ini) | #41 | 148 |
+| 13–14 | (Laporan/Withdrawal … Rilis) | BELUM | — | — | — | — |
 
 \* Rantai v2 di `rebuild/modular-v2`; tag dipindah ke commit ini setelah seluruh rantai hijau (versi lama: `arsip-v1/pertemuan-NN`).
 SHA = commit terakhir rentang pertemuan pada `rebuild/modular-v2`.
@@ -142,13 +143,23 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Pertemuan 11 — Webhook Idempoten, Settlement, Split Allocation, Ledger, dan Reversal · LULUS (v2)
 
-- **GIT:** PR #39 → `rebuild/modular-v2` · tag `pertemuan-11` dipindah di akhir rebuild (v1: PR #21/#22).
+- **GIT:** PR #39 + #40 (penjelasan CSRF; commit akhir `db0cee4`) · tag `pertemuan-11` dipindah di akhir rebuild (v1: PR #21/#22).
 - **OUTPUT:** modul Payments: `WebhookSignatureVerifier` (Support) + `ProcessPaymentWebhook` + `SettlePayment` (settle/reverse) + **`QrisWebhookController` (`app/Modules/Payments/Http/Controllers`) dengan route publik `POST /webhooks/qris` di `app/Modules/Payments/routes/web.php` (`PortalRoutes::web()`)**; model `LedgerEntry`; `confirmSandbox` menjalankan settlement. Live v1 (HTTP nyata): signature valid → 200 + settlement; replay → duplicate; signature salah → 401; saldo `available=34000` (`evidence/pertemuan-11/screenshots/m11-webhook.png`).
 - **TAHAP:** 7/7 (verifikasi signature raw body · dedup idempoten event · event + lunas + settlement atomik · split allocation per tenant · ledger append-only + saldo · reversal · testing & evidence).
 - **VERIFIKASI:** 139 test (489 assertions; **+12** — `WebhookSettlementTest` 6 termasuk pengecualian CSRF modul, `SettlePaymentTest` 3, `WebhookSignatureVerifierTest` 2 unit, + uji pengecualian enkripsi cookie `order_tracking`), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Uji pengecualian CSRF **gagal** bila baris `PreventRequestForgery::except('webhooks/*')` di provider dinonaktifkan (dibuktikan, lalu dipulihkan).
 - **KEAMANAN/DATA:** HMAC-SHA256 atas **raw body** + `hash_equals`, fail-closed; dedup `provider_event_id` UNIQUE + `ledger_entries.idempotency_key` UNIQUE; event+lunas+settlement satu transaksi; split per tenant (`sale_credit` / `commission_debit`); ledger append-only + reversal (CHECK saldo non-negatif); **pengecualian CSRF `webhooks/*` didaftarkan `PaymentsServiceProvider::boot()`** (bukan `bootstrap/app.php`) — keaslian via signature; secret webhook dari `.env` (tidak di-commit).
 - **REVISI MODUL:** DOC-11-001..003 · **004** (webhook & pengecualian CSRF milik modul Payments; kalimat konsep CSRF diselaraskan; path diselaraskan; blok output v1 dipindah dari judul Modul 12) · **005** (BUAT FILE: make:class verifier/service, make:controller FQN --invokable, make:model LedgerEntry, make:test --unit) · **006** (subbagian "Mengapa Endpoint Webhook Dikecualikan dari CSRF?" + Output Nyata M11c: POST tanpa token → 419, webhook → 401 oleh signature, pengecualian dicabut → webhook 419).
 - **KETERBATASAN:** settlement kredit langsung ke `available` (siklus hold/release = penyempurnaan lanjutan); reversal gagal-tertutup bila dana telah ditarik; rate limit webhook ditambahkan pada hardening (Modul 14). Withdrawal = Modul 13.
+
+## Pertemuan 12 — Kitchen Display System Realtime, Status, dan Notifikasi · LULUS (v2)
+
+- **GIT:** PR #41 → `rebuild/modular-v2` · tag `pertemuan-12` dipindah di akhir rebuild (v1: PR #23/#24).
+- **OUTPUT:** modul **Kitchen** sebagai vertical slice: `KitchenService` (mesin status) + `KitchenException`; event `TenantOrderStatusChanged`/`NewTenantOrderReceived` di `app/Modules/Kitchen/Events`; `TenantChannels` di `app/Modules/Kitchen/Realtime`; **channel privat `tenant.{tenantId}.orders` didaftarkan `KitchenServiceProvider::boot()`**; komponen **`kitchen::kitchen-board`** + halaman `kitchen::tenant.kitchen-board` + route `tenant.kitchen` di `app/Modules/Kitchen/routes/tenant.php`. `SettlePayment` (Payments) memicu `NewTenantOrderReceived` — komunikasi lintas modul lewat event. Live v1: papan KDS kolom Baru/Diterima/Disiapkan/Siap (`evidence/pertemuan-12/screenshots/m12-kitchen.png`).
+- **TAHAP:** 7/7 (mesin status + validasi transisi · event broadcast + channel privat · otorisasi keanggotaan channel · komponen KDS Livewire (booted re-verify) · siaran order baru saat settlement · listener Echo + wire:poll fallback · testing & evidence).
+- **VERIFIKASI:** 148 test (515 assertions; **+9** — `KitchenServiceTest` 3, `TenantChannelsTest` 2 termasuk channel terdaftar oleh modul, `KitchenBoardLivewireTest` 4 termasuk halaman KDS merender komponen modul), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau.
+- **KEAMANAN/DATA:** state machine dengan transisi tak sah ditolak; channel privat hanya untuk anggota tenant (didaftarkan di provider agar tetap aktif saat `route:cache`); KDS `booted()` re-verify membership + `TenantContext`; `NewTenantOrderReceived` `ShouldDispatchAfterCommit`; perubahan status ter-audit.
+- **REVISI MODUL:** DOC-12-001..003 · **004** (KDS milik modul Kitchen; channel via provider; nama channel `.kds` → `.orders`; path diselaraskan; blok output v1 dipindah dari judul Modul 13) · **005** (BUAT FILE: make:class, make:exception FQN, make:livewire kitchen::kitchen-board, make:event FQN ×2, make:test).
+- **KETERBATASAN:** koneksi Reverb live butuh server Reverb (realtime diverifikasi lewat dispatch event + otorisasi channel, bukan WebSocket end-to-end di CI); siklus hold→release terikat penyelesaian pesanan = penyempurnaan lanjutan.
 
 ---
 
@@ -162,17 +173,17 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Revisi v2 — Modul sebagai Vertical Slice (2026-09-23) · DIKERJAKAN BERTAHAP
 
-- **STATUS:** Pertemuan 2–11 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 12–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
-- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#39 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
+- **STATUS:** Pertemuan 2–12 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 13–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
+- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#41 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
 - **OUTPUT:** setiap modul memiliki `Http/Controllers`, `Http/Requests`, `routes/{portal}.php`, `resources/views` (+ `livewire/`) sendiri; model, policy, middleware, layout, dan komponen UI tetap shared kernel; `modul_praktikum/` per pertemuan.
 - **TAHAP:** per pertemuan: putar ulang commit v1 → pindahkan berkas fitur ke modul pemilik → quality gate → revisi DOCX in-body (path, Output Nyata b, BUAT FILE) → pecah ulang `modul_praktikum/` → PR → CI → merge.
 - **PERUBAHAN:** `ModuleServiceProvider`, `PortalRoutes` (`customer/tenant/admin/web`), limiter & konfigurasi middleware milik modul (`EncryptCookies::except` di Ordering, `PreventRequestForgery::except` di Payments), scope `CommissionScheme::effectiveAt()`, `ModuleConventionTest`, `CommissionScheduleBoundaryTest`.
 - **VERIFIKASI:** tiap pertemuan Pint + PHPStan 0 + suite penuh di MariaDB nyata + CI; perintah BUAT FILE dijalankan di worktree bersih dan berkas hasilnya dicocokkan dengan berkas baru pertemuan (selisih hanya screenshot evidence / `mariadb-dump`).
 - **KEAMANAN/DATA:** tak ada `.env`/secret di Git; worktree verifikasi memakai salinan `.env` di scratchpad (di luar repo); tidak ada FLUSHDB/penghapusan global; tidak ada dependency baru.
-- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005, DOC-09-004/005, DOC-10-004/005, DOC-11-004/005/006.
+- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005, DOC-09-004/005, DOC-10-004/005, DOC-11-004/005/006, DOC-12-004/005.
 - **TEMUAN:** DOCX v8 v1 (commit docs P8–P14) menyisipkan blok Output Nyata DI DALAM paragraf judul modul berikutnya (21 paragraf bersarang di `main`; skema OOXML tidak valid). Rantai v2 memperbaikinya dengan fungsi `repair` (idempoten, konten utuh) — blok dipindah ke badan modul pemiliknya sebelum "Observe".
 - **KETERBATASAN:** render DOCX penuh per halaman `TIDAK DIUJI` (tanpa LibreOffice/Word-automation; struktur XML, idempotensi patch, dan pratinjau Quick Look/`textutil` diverifikasi).
-- **BERIKUTNYA:** Pertemuan 12 (KDS realtime → komponen `kitchen::board`, event & channel milik modul Kitchen), lalu 13–14.
+- **BERIKUTNYA:** Pertemuan 13 (laporan/rekonsiliasi/ekspor → modul Reporting; withdrawal → modul Payments), lalu 14.
 
 
 ---
