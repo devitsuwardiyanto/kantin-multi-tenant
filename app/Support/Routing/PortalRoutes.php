@@ -14,6 +14,15 @@ use Illuminate\Support\Facades\Route;
 final class PortalRoutes
 {
     /**
+     * Route publik TANPA prefix portal (mis. entry QR meja /q/{token}, webhook provider). Hanya
+     * grup `web`; lapis tambahan (throttle, signature) dipasang per route oleh modul pemiliknya.
+     */
+    public static function web(Closure|string $routes): void
+    {
+        Route::middleware('web')->group($routes);
+    }
+
+    /**
      * Portal pelanggan (publik, anonim).
      */
     public static function customer(Closure|string $routes): void
