@@ -1,0 +1,7 @@
+order_number=ORD-260817-W4L4TI status=awaiting_payment
+subtotal=70000 tax=7000 fee=1400 grand=78400
+ tenant#4 sub=40000 rate=0.1500 commission=6000 net=34000
+ tenant#5 sub=30000 rate=0.2000 commission=6000 net=24000
+tracking_returned=yes
+stockA=8 stockB=9
+idempotent_same_order=yes replay=yes order_count=1

@@ -7,7 +7,7 @@ namespace App\Modules\Ordering\Data;
  * dihitung ulang dari basis data saat menyusun tampilan — bukan dari nilai tersimpan di Redis.
  * priceAtAdd hanya informatif (deteksi "harga berubah"), tidak pernah dipakai sebagai otoritas.
  *
- * @phpstan-type ModifierShape array{id: int, name: string, price_delta: int}
+ * @phpstan-type ModifierShape array{id: int, group_id: int, group_name: string, name: string, price_delta: int}
  */
 final readonly class CartLine
 {
@@ -24,6 +24,7 @@ final readonly class CartLine
         public int $quantity,
         public int $unitPrice,
         public int $priceAtAdd,
+        public int $prepMinutes,
         public array $modifiers,
         public int $modifierTotal,
         public int $lineTotal,
