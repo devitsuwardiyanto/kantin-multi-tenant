@@ -2,25 +2,26 @@
 
 namespace App\Modules\Catalog;
 
-use Illuminate\Support\ServiceProvider;
+use App\Modules\ModuleServiceProvider;
 
 /**
- * Modul: Catalog.
+ * Modul: Catalog (alias `catalog`).
  * Tanggung jawab: Kategori, menu, modifier, stok tenant, dan public catalog (Modul 7).
  *
- * Titik perakitan modul (modular monolith): binding container di register(),
- * route/event/policy di boot(). Batas antarmodul ditegakkan lewat kontrak & event,
+ * Titik perakitan modul: binding container di register(); route (routes/*.php), view
+ * (`catalog::`) dan komponen Livewire (`<livewire:catalog::...>`) dimuat oleh
+ * ModuleServiceProvider::boot(). Batas antarmodul ditegakkan lewat kontrak & event,
  * bukan akses langsung tabel/controller modul lain.
  */
-final class CatalogServiceProvider extends ServiceProvider
+final class CatalogServiceProvider extends ModuleServiceProvider
 {
     public function register(): void
     {
         // Binding kontrak -> implementasi ditambahkan saat modul diimplementasikan.
     }
 
-    public function boot(): void
+    protected function moduleAlias(): string
     {
-        //
+        return 'catalog';
     }
 }
