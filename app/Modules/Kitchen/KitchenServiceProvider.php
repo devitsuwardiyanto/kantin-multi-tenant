@@ -2,7 +2,10 @@
 
 namespace App\Modules\Kitchen;
 
+use App\Models\User;
+use App\Modules\Kitchen\Realtime\TenantChannels;
 use App\Modules\ModuleServiceProvider;
+use Illuminate\Support\Facades\Broadcast;
 
 /**
  * Modul: Kitchen (alias `kitchen`).
@@ -18,6 +21,15 @@ final class KitchenServiceProvider extends ModuleServiceProvider
     public function register(): void
     {
         // Binding kontrak -> implementasi ditambahkan saat modul diimplementasikan.
+    }
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        // Antrean dapur per tenant (privat): hanya anggota tenant yang boleh mendengarkan.
+        // Didaftarkan di provider (bukan routes/*.php modul) agar tetap aktif saat route:cache.
+        Broadcast::channel(TenantChannels::ORDERS_PATTERN, fn (User $user, int $tenantId): bool => TenantChannels::canAccessOrders($user, $tenantId));
     }
 
     protected function moduleAlias(): string
