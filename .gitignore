@@ -24,3 +24,7 @@ yarn-error.log
 /.zed
 .env.testing
 .DS_Store
+
+# Office lock/owner files
+~$*
+.~lock.*
