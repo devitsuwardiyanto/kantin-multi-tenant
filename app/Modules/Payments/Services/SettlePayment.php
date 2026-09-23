@@ -5,6 +5,7 @@ namespace App\Modules\Payments\Services;
 use App\Models\Payment;
 use App\Models\TenantOrder;
 use App\Modules\Admin\Services\AuditLogger;
+use App\Modules\Kitchen\Events\NewTenantOrderReceived;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -38,6 +39,9 @@ final class SettlePayment
                     'payment_id' => $payment->id,
                     'net' => $tenantOrder->net_amount,
                 ], (int) $tenantOrder->tenant_id);
+
+                // Pesanan lunas → masuk antrean dapur (disiarkan setelah commit).
+                event(new NewTenantOrderReceived($tenantOrder));
             }
         });
     }
