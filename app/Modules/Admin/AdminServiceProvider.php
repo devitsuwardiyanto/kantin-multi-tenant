@@ -2,25 +2,26 @@
 
 namespace App\Modules\Admin;
 
-use Illuminate\Support\ServiceProvider;
+use App\Modules\ModuleServiceProvider;
 
 /**
- * Modul: Admin.
+ * Modul: Admin (alias `admin`).
  * Tanggung jawab: Administrasi kantin, tenant, role, komisi, rekening (Modul 5). Pemilik route admin.
  *
- * Titik perakitan modul (modular monolith): binding container di register(),
- * route/event/policy di boot(). Batas antarmodul ditegakkan lewat kontrak & event,
+ * Titik perakitan modul: binding container di register(); route (routes/*.php), view
+ * (`admin::`) dan komponen Livewire (`<livewire:admin::...>`) dimuat oleh
+ * ModuleServiceProvider::boot(). Batas antarmodul ditegakkan lewat kontrak & event,
  * bukan akses langsung tabel/controller modul lain.
  */
-final class AdminServiceProvider extends ServiceProvider
+final class AdminServiceProvider extends ModuleServiceProvider
 {
     public function register(): void
     {
         // Binding kontrak -> implementasi ditambahkan saat modul diimplementasikan.
     }
 
-    public function boot(): void
+    protected function moduleAlias(): string
     {
-        //
+        return 'admin';
     }
 }
