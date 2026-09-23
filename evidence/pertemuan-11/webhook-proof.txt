@@ -1,0 +1,18 @@
+# Bukti Webhook → Settlement → Ledger (HTTP nyata, server dev)
+Order net: sale_credit +40000, commission_debit -6000 → saldo available 34000 (subtotal 40000, komisi 15%).
+
+1) Signature VALID (evt-A) → settlement:
+{"status":"ok"}  → HTTP 200
+
+2) REPLAY evt-A (idempoten):
+{"status":"duplicate"}  → HTTP 200
+
+3) Signature SALAH → ditolak tanpa efek:
+{"status":"invalid_signature"}  → HTTP 401
+
+4) State finansial:
+ payment=paid
+ ledger commission_debit=-6000
+ ledger sale_credit=40000
+ balance_available=34000
+ events(verified)=1
