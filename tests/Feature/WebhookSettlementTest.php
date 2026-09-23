@@ -17,6 +17,7 @@ use App\Support\Tokens\OpaqueToken;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -167,5 +168,11 @@ class WebhookSettlementTest extends TestCase
         // Test HTTP melewati CSRF saat unit test, jadi pengecualian modul diverifikasi langsung.
         $this->assertContains('webhooks/*', app(PreventRequestForgery::class)->getExcludedPaths());
         $this->assertContains('web', app('router')->getRoutes()->getByName('webhooks.qris')?->gatherMiddleware() ?? []);
+    }
+
+    public function test_webhook_is_rate_limited_by_payments_module(): void
+    {
+        $this->assertNotNull(RateLimiter::limiter('qris-webhook'), 'limiter qris-webhook harus didaftarkan PaymentsServiceProvider');
+        $this->assertContains('throttle:qris-webhook', app('router')->getRoutes()->getByName('webhooks.qris')?->gatherMiddleware() ?? []);
     }
 }
