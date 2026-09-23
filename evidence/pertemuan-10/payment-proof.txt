@@ -1,0 +1,8 @@
+provider=fake-qris-sandbox sandbox=yes
+payment_status=pending amount=47040
+qris=0002010102125204000053033605405470405802ID5918KANTIN MULTITE..
+provider_ref=FAKE-QRIS-PSKKLXIAKQZ7NUNBSGVI
+idempotent_initiate_same=yes payment_count=1
+after_pay: payment=paid order=paid attempt=success
+events=1 result=verified
+idempotent_confirm_events=1
