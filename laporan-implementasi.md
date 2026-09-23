@@ -26,8 +26,8 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 4 | Isolasi Multi-Tenant (Context/Scope/Policy/Binding) | LULUS | `pertemuan-04`* | `db0e0ab` | #31 | 65 |
 | 5 | Administrasi Kantin, Tenant, Role, Komisi | LULUS | `pertemuan-05`* | `59f46b1` | #32, #33 | 77 |
 | 6 | Meja, QR Token Opaque, Sesi Anonim | LULUS | `pertemuan-06`* | `c8de898` | #34 | 85 |
-| 7 | Katalog Menu, Modifier, Stok, Public Catalog | LULUS | `pertemuan-07`* | (PR ini) | #35 | 93 |
-| 8 | Keranjang Redis & Revalidasi Harga/Stok | BELUM | — | — | — | — |
+| 7 | Katalog Menu, Modifier, Stok, Public Catalog | LULUS | `pertemuan-07`* | `7bdce0b` | #35 | 93 |
+| 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08`* | (PR ini) | #36 | 109 |
 | 9–14 | (Checkout … Rilis) | BELUM | — | — | — | — |
 
 \* Rantai v2 di `rebuild/modular-v2`; tag dipindah ke commit ini setelah seluruh rantai hijau (versi lama: `arsip-v1/pertemuan-NN`).
@@ -100,12 +100,22 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Pertemuan 07 — Katalog Menu Tenant, Modifier, Stok, dan Public Catalog · LULUS (v2)
 
-- **GIT:** PR #35 → `rebuild/modular-v2` · tag `pertemuan-07` dipindah di akhir rebuild (v1: PR #12).
+- **GIT:** PR #35 (commit akhir `7bdce0b`) · tag `pertemuan-07` dipindah di akhir rebuild (v1: PR #12).
 - **OUTPUT:** komponen Livewire **`catalog::menu-manager`** dan **`catalog::menu-catalog`** (SFC di `app/Modules/Catalog/resources/views/livewire`), halaman `catalog::tenant.menu-manager`, route `tenant.menu-manager` di modul Catalog; `MenuStockService`.
 - **TAHAP:** 7/7.
 - **VERIFIKASI:** 93 test (331 assertions) termasuk halaman menu-manager merender komponen modul; anti-N+1 (≤6 query); CI hijau.
 - **KEAMANAN/DATA:** katalog publik tanpa bocor lintas-canteen; `tenant_id` dari context; `booted()` re-verify membership (tampering → 403); stok atomik + audit.
 - **REVISI MODUL:** DOC-07-001..003 · **004** (komponen/halaman/route milik modul Catalog) · **005** (BUAT FILE; `make:livewire catalog::…` langsung menulis ke folder modul).
+
+## Pertemuan 08 — Keranjang Redis per Sesi dan Revalidasi Harga/Stok · LULUS (v2)
+
+- **GIT:** PR #36 → `rebuild/modular-v2` · tag `pertemuan-08` dipindah di akhir rebuild (v1: PR #15/#16).
+- **OUTPUT:** `CartService` (Redis) + `ResolveCustomerSession` + DTO `CartView`/`CartLine` + `CartException` di modul Ordering; komponen Livewire **`ordering::cart`** (`app/Modules/Ordering/resources/views/livewire/⚡cart.blade.php`) + tombol "Tambah" di `catalog::menu-catalog` (event `cart-add`); beranda pelanggan merender kedua komponen modul. Live v1: tambah 2×Rp16.000 + 1×Rp15.000 → **Subtotal Rp 47.000** (`evidence/pertemuan-08/screenshots/m8-cart.png`).
+- **TAHAP:** 7/7 (model penyimpanan Redis per sesi · add/merge + batas · setQuantity/remove/clear · revalidasi harga/stok/ketersediaan · resolver sesi tepercaya · komponen Livewire + wiring katalog · testing & evidence).
+- **VERIFIKASI:** 109 test (371 assertions; **+16** — `CartServiceTest` 9, `CartLivewireTest` 5 termasuk beranda merender `catalog::menu-catalog` + `ordering::cart`, `ResolveCustomerSessionTest` 2), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Bukti Redis: key `cart:<ulid>`, `TTL≈14400s`, subtotal ikut harga DB (20000→26000), `clear` menghapus key.
+- **KEAMANAN/DATA:** keranjang di-key per sesi pelanggan (ULID dari cookie HttpOnly ter-hash); Redis hanya identitas + kuantitas — **harga & stok selalu dihitung ulang dari DB**; menu wajib milik tenant AKTIF canteen sesi; modifier lintas-tenant ditolak; hanya `SETEX`/`DEL` satu key milik sesi (**tanpa FLUSHDB**); isolasi antar sesi terbukti.
+- **REVISI MODUL:** DOC-08-001..003 · **004** (keranjang di modul Ordering; blok output Modul 8 v1 yang tersisip di judul Modul 9 dipindah ke badan Modul 8) · **005** (BUAT FILE: make:class DTO/service, make:exception FQN, make:livewire ordering::cart).
+- **KETERBATASAN:** validasi pivot `menu_modifier_groups` belum di `add()` (validasi level tenant + ketersediaan); checkout menyusul Pertemuan 9. DOCX v8 di `main` (v1) memuat 21 paragraf bersarang akibat bug sisip blok output P8–P14 — diperbaiki di rantai v2 (fungsi repair), Word pada versi v1 mungkin meminta perbaikan dokumen saat dibuka.
 
 ---
 
@@ -119,14 +129,15 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Revisi v2 — Modul sebagai Vertical Slice (2026-09-23) · DIKERJAKAN BERTAHAP
 
-- **STATUS:** Pertemuan 2–7 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 8–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
-- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#35 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
+- **STATUS:** Pertemuan 2–8 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 9–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
+- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#36 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
 - **OUTPUT:** setiap modul memiliki `Http/Controllers`, `Http/Requests`, `routes/{portal}.php`, `resources/views` (+ `livewire/`) sendiri; model, policy, middleware, layout, dan komponen UI tetap shared kernel; `modul_praktikum/` per pertemuan.
 - **TAHAP:** per pertemuan: putar ulang commit v1 → pindahkan berkas fitur ke modul pemilik → quality gate → revisi DOCX in-body (path, Output Nyata b, BUAT FILE) → pecah ulang `modul_praktikum/` → PR → CI → merge.
 - **PERUBAHAN:** `ModuleServiceProvider`, `PortalRoutes` (`customer/tenant/admin/web`), limiter milik modul, scope `CommissionScheme::effectiveAt()`, `ModuleConventionTest`, `CommissionScheduleBoundaryTest`.
 - **VERIFIKASI:** tiap pertemuan Pint + PHPStan 0 + suite penuh di MariaDB nyata + CI; perintah BUAT FILE dijalankan di worktree bersih dan berkas hasilnya dicocokkan dengan berkas baru pertemuan (selisih hanya screenshot evidence / `mariadb-dump`).
 - **KEAMANAN/DATA:** tak ada `.env`/secret di Git; worktree verifikasi memakai salinan `.env` di scratchpad (di luar repo); tidak ada FLUSHDB/penghapusan global; tidak ada dependency baru.
-- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005.
+- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005.
+- **TEMUAN:** DOCX v8 v1 (commit docs P8–P14) menyisipkan blok Output Nyata DI DALAM paragraf judul modul berikutnya (21 paragraf bersarang di `main`; skema OOXML tidak valid). Rantai v2 memperbaikinya dengan fungsi `repair` (idempoten, konten utuh) — blok dipindah ke badan modul pemiliknya sebelum "Observe".
 - **KETERBATASAN:** render DOCX penuh per halaman `TIDAK DIUJI` (tanpa LibreOffice/Word-automation; struktur XML, idempotensi patch, dan pratinjau Quick Look/`textutil` diverifikasi).
-- **BERIKUTNYA:** Pertemuan 8 (keranjang Redis → komponen `ordering::cart`), lalu 9–14; checkout M9 memakai `CommissionScheme::effectiveAt()`.
+- **BERIKUTNYA:** Pertemuan 9 (checkout atomik; `CheckoutService::activeCommission` memakai `CommissionScheme::effectiveAt()`), lalu 10–14.
 
