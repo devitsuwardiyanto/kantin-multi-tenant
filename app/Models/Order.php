@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Order induk — platform-scoped (TANPA tenant_id): satu checkout bisa lintas tenant.
@@ -43,5 +44,16 @@ class Order extends Model
     public function tenantOrders(): HasMany
     {
         return $this->hasMany(TenantOrder::class);
+    }
+
+    /** @return HasOne<Payment, $this> */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(Payment::class);
+    }
+
+    public function isAwaitingPayment(): bool
+    {
+        return $this->status === 'awaiting_payment';
     }
 }

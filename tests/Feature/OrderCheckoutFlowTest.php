@@ -90,6 +90,7 @@ class OrderCheckoutFlowTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($result->order->order_number);
+        $response->assertSeeLivewire('payments::order-payment');
     }
 
     public function test_order_status_page_generic_404_without_valid_cookie(): void
