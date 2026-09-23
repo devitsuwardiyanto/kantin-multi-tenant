@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // Gateway QRIS. webhook_secret dipakai memverifikasi signature (HMAC-SHA256 atas raw body).
+    // Fail-closed: tanpa secret, semua webhook ditolak.
+    'qris' => [
+        'webhook_secret' => env('QRIS_WEBHOOK_SECRET'),
+    ],
+
 ];

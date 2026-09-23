@@ -5,6 +5,7 @@ namespace App\Modules\Payments;
 use App\Modules\ModuleServiceProvider;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Gateways\FakeQrisGateway;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 
 /**
  * Modul: Payments (alias `payments`).
@@ -22,6 +23,14 @@ final class PaymentsServiceProvider extends ModuleServiceProvider
         // HANYA SATU provider di-bind pada satu waktu. Sandbox memakai FakeQrisGateway;
         // mengganti ke provider nyata dilakukan dengan menukar binding tunggal ini.
         $this->app->bind(PaymentGateway::class, FakeQrisGateway::class);
+    }
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        // Webhook provider tak mengirim token CSRF; keaslian dijamin signature HMAC atas raw body.
+        PreventRequestForgery::except('webhooks/*');
     }
 
     protected function moduleAlias(): string
