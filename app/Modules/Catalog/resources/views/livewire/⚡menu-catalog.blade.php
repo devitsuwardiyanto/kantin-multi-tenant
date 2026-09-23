@@ -37,6 +37,15 @@ new class extends Component
         $this->category = $name;
     }
 
+    /**
+     * Meneruskan permintaan tambah ke komponen keranjang (yang memegang sesi tepercaya).
+     * Katalog sendiri anonim; ia tidak menyimpan/menentukan harga.
+     */
+    public function add(int $menuId): void
+    {
+        $this->dispatch('cart-add', menuId: $menuId);
+    }
+
     #[Computed]
     public function canteen(): ?Canteen
     {
@@ -125,6 +134,12 @@ new class extends Component
                             @unless ($menu->is_available && $menu->stock_qty > 0)
                                 <span class="shrink-0 rounded border border-zinc-300 px-2 py-0.5 text-[10px] font-bold text-zinc-600">HABIS</span>
                             @endunless
+                            @if ($sellable)
+                                <button type="button" wire:click="add({{ $menu->id }})"
+                                    class="min-h-9 shrink-0 rounded-lg border border-zinc-300 px-3 text-sm font-medium dark:border-zinc-600">
+                                    + Tambah
+                                </button>
+                            @endif
                         </li>
                     @endforeach
                 </ul>

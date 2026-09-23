@@ -1,0 +1,5 @@
+redis_key_exists=1
+ttl_seconds=14399
+subtotal=20000 qty=2
+after_price_change_subtotal=26000 price_changed=yes
+after_clear_exists=0
