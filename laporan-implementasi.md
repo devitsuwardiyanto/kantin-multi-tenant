@@ -28,8 +28,9 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 6 | Meja, QR Token Opaque, Sesi Anonim | LULUS | `pertemuan-06`* | `c8de898` | #34 | 85 |
 | 7 | Katalog Menu, Modifier, Stok, Public Catalog | LULUS | `pertemuan-07`* | `7bdce0b` | #35 | 93 |
 | 8 | Keranjang Redis & Revalidasi Harga/Stok | LULUS | `pertemuan-08`* | `57ac4ca` | #36 | 109 |
-| 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09`* | (PR ini) | #37 | 120 |
-| 10–14 | (Payment … Rilis) | BELUM | — | — | — | — |
+| 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09`* | `4f3ae95` | #37 | 120 |
+| 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10`* | (PR ini) | #38 | 127 |
+| 11–14 | (Webhook/Ledger … Rilis) | BELUM | — | — | — | — |
 
 \* Rantai v2 di `rebuild/modular-v2`; tag dipindah ke commit ini setelah seluruh rantai hijau (versi lama: `arsip-v1/pertemuan-NN`).
 SHA = commit terakhir rentang pertemuan pada `rebuild/modular-v2`.
@@ -120,13 +121,23 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Pertemuan 09 — Checkout Atomik, Order Induk, Snapshot, dan Pre-Order · LULUS (v2)
 
-- **GIT:** PR #37 → `rebuild/modular-v2` · tag `pertemuan-09` dipindah di akhir rebuild (v1: PR #17/#18).
+- **GIT:** PR #37 (commit akhir `4f3ae95`) · tag `pertemuan-09` dipindah di akhir rebuild (v1: PR #17/#18).
 - **OUTPUT:** `CheckoutService` (keranjang→order atomik) + DTO `CheckoutResult` + `CheckoutException` di modul Ordering; **`OrderStatusController` + view `ordering::order` + route `customer.order.show`** di `app/Modules/Ordering` (route portal pelanggan milik modul); model `OrderItemModifier`; tombol checkout di `ordering::cart` + cookie pelacakan. Live v1: split 2 tenant, Subtotal Rp 47.000 + Pajak Rp 4.700 + Biaya Rp 940 = **Total Rp 52.640** (`evidence/pertemuan-09/screenshots/m9-order.png`).
 - **TAHAP:** 7/7 (revalidasi ulang keranjang · order induk + snapshot · split per-tenant + snapshot komisi · potong stok atomik + idempotensi · pre-order `scheduled_at` · halaman status + pelacakan opaque · testing & evidence).
 - **VERIFIKASI:** 120 test (418 assertions; **+11** — `CheckoutServiceTest` 8 termasuk **checkout tepat di batas pergantian komisi**, `OrderCheckoutFlowTest` 3), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Test batas komisi **gagal** bila `ChangeCommissionSchedule` memakai `subSecond()` lama (dibuktikan lalu dipulihkan).
 - **KEAMANAN/DATA:** checkout atomik (rollback tanpa order parsial); revalidasi harga/stok dari DB; idempoten `checkout_key` UNIQUE (+ replay saat balapan); stok berpenjaga (`WHERE stock_qty >= qty`); **komisi effective-dated lewat scope `CommissionScheme::effectiveAt(now())`** — interval setengah-terbuka, tak ada celah di pergantian tarif — di-snapshot (rate + `commission_id`, composite FK); `tenant_id` eksplisit per baris (checkout anonim); token pelacakan opaque (hash SHA-256) via cookie HttpOnly; pengecualian enkripsi `order_tracking` didaftarkan `OrderingServiceProvider`; halaman status 404 generik tanpa token sah.
 - **REVISI MODUL:** DOC-09-001..003 · **004** (checkout & status pesanan di modul Ordering; komisi via `effectiveAt()`; blok output v1 dipindah dari judul Modul 10) · **005** (BUAT FILE: make:class DTO/service, make:exception FQN, make:model, make:controller FQN --invokable).
 - **KETERBATASAN:** stok dipotong sebagai reservasi saat checkout; pelepasan saat batal/kedaluwarsa menyusul Modul 10–11. Stok modifier belum dipotong.
+
+## Pertemuan 10 — Payment Gateway Contract dan QRIS Dinamis Sandbox · LULUS (v2)
+
+- **GIT:** PR #38 → `rebuild/modular-v2` · tag `pertemuan-10` dipindah di akhir rebuild (v1: PR #19/#20).
+- **OUTPUT:** modul **Payments** sebagai vertical slice: kontrak `PaymentGateway` (`make:interface`), DTO `PaymentChargeRequest`/`QrisCharge`, `PaymentException`, adapter `FakeQrisGateway` (EMVCo + CRC16), `PaymentService`, dan komponen Livewire **`payments::order-payment`** yang disematkan halaman `ordering::order`; `ResolveTrackedOrder` (Ordering); model `Payment`/`PaymentAttempt`/`PaymentEvent`. Live v1: "Bayar dengan QRIS" → payload EMVCo dinamis + tombol simulasi sandbox (`evidence/pertemuan-10/screenshots/m10-qris.png`).
+- **TAHAP:** 7/7 (kontrak gateway bebas provider · FakeQrisGateway + payload EMVCo/CRC16 · model pembayaran · inisiasi idempoten · konfirmasi sandbox + event append-only · UI QRIS Livewire · testing & evidence).
+- **VERIFIKASI:** 127 test (449 assertions; **+7** — `PaymentServiceTest` 4, `FakeQrisGatewayTest` 2 unit, `PaymentLivewireTest` 1; halaman status pesanan kini juga memastikan komponen `payments::order-payment` dirender), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau. Container me-resolve `PaymentGateway` → `FakeQrisGateway` (tinker).
+- **KEAMANAN/DATA:** **satu provider** di-bind di `PaymentsServiceProvider::register()` (ganti provider = tukar binding tunggal); inisiasi idempoten (satu payment per order); nominal dari `grand_total`; payload EMVCo + CRC16 valid; `payment_event` append-only (dedup `provider_event_id`); simulasi hanya pada gateway sandbox — bukan pengganti webhook produksi.
+- **REVISI MODUL:** DOC-10-001..003 · **004** (modul Payments sebagai vertical slice; path diselaraskan; blok output v1 dipindah dari judul Modul 11) · **005** (BUAT FILE: make:interface FQN, make:model ×3, make:class, make:exception FQN, make:livewire payments::order-payment, make:test --unit).
+- **KETERBATASAN:** QR raster butuh `chillerlan/php-qrcode` (menunggu persetujuan) — payload ditampilkan sebagai teks. Settlement/ledger + webhook ber-signature menyusul Modul 11.
 
 ---
 
@@ -140,15 +151,15 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Revisi v2 — Modul sebagai Vertical Slice (2026-09-23) · DIKERJAKAN BERTAHAP
 
-- **STATUS:** Pertemuan 2–9 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 10–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
-- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#37 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
+- **STATUS:** Pertemuan 2–10 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 11–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
+- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#38 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
 - **OUTPUT:** setiap modul memiliki `Http/Controllers`, `Http/Requests`, `routes/{portal}.php`, `resources/views` (+ `livewire/`) sendiri; model, policy, middleware, layout, dan komponen UI tetap shared kernel; `modul_praktikum/` per pertemuan.
 - **TAHAP:** per pertemuan: putar ulang commit v1 → pindahkan berkas fitur ke modul pemilik → quality gate → revisi DOCX in-body (path, Output Nyata b, BUAT FILE) → pecah ulang `modul_praktikum/` → PR → CI → merge.
 - **PERUBAHAN:** `ModuleServiceProvider`, `PortalRoutes` (`customer/tenant/admin/web`), limiter milik modul, scope `CommissionScheme::effectiveAt()`, `ModuleConventionTest`, `CommissionScheduleBoundaryTest`.
 - **VERIFIKASI:** tiap pertemuan Pint + PHPStan 0 + suite penuh di MariaDB nyata + CI; perintah BUAT FILE dijalankan di worktree bersih dan berkas hasilnya dicocokkan dengan berkas baru pertemuan (selisih hanya screenshot evidence / `mariadb-dump`).
 - **KEAMANAN/DATA:** tak ada `.env`/secret di Git; worktree verifikasi memakai salinan `.env` di scratchpad (di luar repo); tidak ada FLUSHDB/penghapusan global; tidak ada dependency baru.
-- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005, DOC-09-004/005.
+- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005, DOC-09-004/005, DOC-10-004/005.
 - **TEMUAN:** DOCX v8 v1 (commit docs P8–P14) menyisipkan blok Output Nyata DI DALAM paragraf judul modul berikutnya (21 paragraf bersarang di `main`; skema OOXML tidak valid). Rantai v2 memperbaikinya dengan fungsi `repair` (idempoten, konten utuh) — blok dipindah ke badan modul pemiliknya sebelum "Observe".
 - **KETERBATASAN:** render DOCX penuh per halaman `TIDAK DIUJI` (tanpa LibreOffice/Word-automation; struktur XML, idempotensi patch, dan pratinjau Quick Look/`textutil` diverifikasi).
-- **BERIKUTNYA:** Pertemuan 10 (kontrak gateway + QRIS sandbox → modul Payments), lalu 11–14.
+- **BERIKUTNYA:** Pertemuan 11 (webhook idempoten + settlement/ledger → modul Payments; controller webhook + route publik + limiter milik modul), lalu 12–14.
 
