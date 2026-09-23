@@ -13,8 +13,8 @@ Status kanonik yang dapat dilanjutkan lintas sesi. Ditentukan dari tag/release/e
 | 7 | **LULUS** (rantai v2) | `feat/pertemuan-07-catalog-v2` | `rebuild/modular-v2` | [#35](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/35) | `7bdce0b` | `pertemuan-07` (dipindah di akhir rebuild) | — | Menu manager + public catalog sebagai komponen `catalog::` milik modul Catalog; MenuStockService atomik+audit; 93 test. Foto ditunda (DOC-07-001). |
 | 8 | **LULUS** (rantai v2) | `feat/pertemuan-08-cart-v2` | `rebuild/modular-v2` | [#36](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/36) | `57ac4ca` | `pertemuan-08` (dipindah di akhir rebuild) | — | Keranjang Redis per sesi + revalidasi harga/stok dari DB; komponen `ordering::cart`; 109 test. |
 | 9 | **LULUS** (rantai v2) | `feat/pertemuan-09-checkout-v2` | `rebuild/modular-v2` | [#37](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/37) | `4f3ae95` | `pertemuan-09` (dipindah di akhir rebuild) | — | Checkout atomik idempoten + snapshot (komisi via `effectiveAt()`); status pesanan di modul Ordering; 120 test. |
-| 10 | **IN PROGRESS** (rantai v2) | `feat/pertemuan-10-payments-v2` | `rebuild/modular-v2` | — | — | — | — | Kontrak PaymentGateway + satu binding FakeQrisGateway; PaymentService idempoten; komponen `payments::order-payment`; 127 test. |
-| 11 | BELUM | — | — | — | — | — | — | |
+| 10 | **LULUS** (rantai v2) | `feat/pertemuan-10-payments-v2` | `rebuild/modular-v2` | [#38](https://github.com/devitsuwardiyanto/kantin-multi-tenant/pull/38) | `383b50a` | `pertemuan-10` (dipindah di akhir rebuild) | — | Kontrak PaymentGateway + satu binding FakeQrisGateway; PaymentService idempoten; komponen `payments::order-payment`; 127 test. |
+| 11 | **IN PROGRESS** (rantai v2) | `feat/pertemuan-11-webhook-v2` | `rebuild/modular-v2` | — | — | — | — | Webhook HMAC raw body + dedup + settlement/ledger append-only; controller, route publik, dan pengecualian CSRF milik modul Payments; 139 test. |
 | 12 | BELUM | — | — | — | — | — | — | |
 | 13 | BELUM | — | — | — | — | — | — | |
 | 14 | BELUM | — | — | — | — | — | — | |
