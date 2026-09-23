@@ -12,6 +12,7 @@ use App\Modules\Ordering\Services\CartService;
 use App\Modules\Ordering\Services\CheckoutService;
 use App\Modules\Ordering\Services\ResolveCustomerSession;
 use App\Support\Tokens\OpaqueToken;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
@@ -107,5 +108,11 @@ class OrderCheckoutFlowTest extends TestCase
         $this->withUnencryptedCookie('order_tracking', 'token-palsu')
             ->get(route('customer.order.show', ['canteen' => $canteen->slug]))
             ->assertNotFound();
+    }
+
+    public function test_order_tracking_cookie_is_excluded_from_encryption_by_ordering_module(): void
+    {
+        $this->assertTrue(app(EncryptCookies::class)->isDisabled('order_tracking'));
+        $this->assertFalse(app(EncryptCookies::class)->isDisabled('customer_session'));
     }
 }

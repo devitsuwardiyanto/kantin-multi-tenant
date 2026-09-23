@@ -37,10 +37,13 @@ return [
 
     // Gateway QRIS (UC-07). Masa berlaku QRIS maksimal 15 menit; NMID merchant ditampilkan
     // tersamar di layar pembayaran. fake_unavailable menirukan gateway yang tidak merespons.
+    // webhook_secret dipakai memverifikasi signature (HMAC-SHA256 atas raw body).
+    // Fail-closed: tanpa secret, semua webhook ditolak.
     'qris' => [
         'expiry_seconds' => (int) env('QRIS_EXPIRY_SECONDS', 900),
         'merchant_nmid' => env('QRIS_MERCHANT_NMID', 'ID1020008821'),
         'fake_unavailable' => (bool) env('QRIS_FAKE_UNAVAILABLE', false),
+        'webhook_secret' => env('QRIS_WEBHOOK_SECRET'),
     ],
 
 ];
