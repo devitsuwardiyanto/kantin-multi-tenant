@@ -9,8 +9,9 @@ use DomainException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Komisi effective-dated: kunci versi aktif, tolak overlap, tutup rentang lama,
- * insert versi baru. DB guard (uq_commission_active_per_tenant) = lapis terakhir.
+ * Komisi effective-dated: kunci versi aktif, tolak overlap, tutup rentang lama tepat di waktu
+ * efektif (interval setengah-terbuka), insert versi baru. DB guard (uq_commission_active_per_tenant)
+ * = lapis terakhir.
  */
 final class ChangeCommissionSchedule
 {
@@ -31,7 +32,9 @@ final class ChangeCommissionSchedule
             }
 
             $before = $active?->only(['id', 'commission_rate', 'valid_from', 'valid_to']);
-            $active?->forceFill(['valid_to' => $effectiveAt->copy()->subSecond()])->save();
+            // Interval setengah-terbuka [valid_from, valid_to): versi lama berakhir TEPAT saat versi
+            // baru mulai berlaku, sehingga tidak ada instan tanpa skema (lihat CommissionScheme::effectiveAt).
+            $active?->forceFill(['valid_to' => $effectiveAt])->save();
 
             $new = (new CommissionScheme)->forceFill([
                 'tenant_id' => $tenant->id,

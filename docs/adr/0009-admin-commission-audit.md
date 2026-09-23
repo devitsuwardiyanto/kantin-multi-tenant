@@ -10,7 +10,8 @@
    scheduleCommission/manageBank/assignRole) berbasis `user_canteen_roles`, bukan string role tersebar.
 2. **Canteen dari konteks tepercaya**: canteen aktor diturunkan dari keanggotaannya, bukan input request.
 3. **Komisi effective-dated** (`ChangeCommissionSchedule`): transaksi + `lockForUpdate()` versi aktif,
-   tutup rentang lama (`valid_to`), insert versi baru; overlap ditolak. **Guard DB (lapis terakhir)**:
+   tutup rentang lama tepat pada waktu efektif (`valid_to` = `valid_from` versi baru; interval setengah-terbuka
+   `[valid_from, valid_to)`, dibaca lewat scope `CommissionScheme::effectiveAt()`), insert versi baru; overlap ditolak. **Guard DB (lapis terakhir)**:
    generated column `active_lock = IF(valid_to IS NULL, tenant_id, NULL)` + UNIQUE → satu skema aktif/tenant.
    Snapshot komisi pada order (Modul 3/9) memutus ketergantungan histori terhadap tarif aktif.
 4. **Rekening**: `encrypted` cast pada `account_number_cipher`, `account_last4` untuk tampilan; nomor mentah
