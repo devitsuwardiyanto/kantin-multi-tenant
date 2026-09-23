@@ -5,7 +5,10 @@ namespace App\Modules\Payments;
 use App\Modules\ModuleServiceProvider;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Gateways\FakeQrisGateway;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Modul: Payments (alias `payments`).
@@ -31,6 +34,9 @@ final class PaymentsServiceProvider extends ModuleServiceProvider
 
         // Webhook provider tak mengirim token CSRF; keaslian dijamin signature HMAC atas raw body.
         PreventRequestForgery::except('webhooks/*');
+
+        // Webhook pembayaran: batasi laju per IP (dedup + signature tetap lapis utama; Modul 14).
+        RateLimiter::for('qris-webhook', fn (Request $request): Limit => Limit::perMinute(120)->by($request->ip() ?? 'unknown'));
     }
 
     protected function moduleAlias(): string

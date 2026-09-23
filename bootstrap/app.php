@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetTenantContext;
 use App\Support\Routing\PortalRoutes;
 use Illuminate\Foundation\Application;
@@ -28,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'tenant' => SetTenantContext::class,
         ]);
+
+        // Header keamanan dasar pada seluruh respons (hardening, Modul 14). Global = shared kernel;
+        // konfigurasi milik modul (cookie order_tracking, CSRF webhooks/*, limiter) ada di provider modul.
+        $middleware->append(SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
