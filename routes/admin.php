@@ -4,7 +4,8 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * Konteks PENGELOLA KANTIN (internal). Prefix: admin, name: admin.*
- * Middleware auth+verified+role:admin dipasang di bootstrap/app.php.
+ * Grup (prefix/name/middleware auth+verified+role:admin) didefinisikan tunggal di PortalRoutes::admin();
+ * route fitur ditambahkan oleh modul di app/Modules/{Modul}/routes/admin.php.
  * Administrasi tenant/role/komisi diisi Modul 5.
  */
 Route::get('/dashboard', function () {

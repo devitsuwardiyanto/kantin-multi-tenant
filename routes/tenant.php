@@ -4,7 +4,8 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * Konteks OPERATOR TENANT (internal). Prefix: tenant/{tenant}, name: tenant.*
- * Middleware auth+verified+role:tenant dipasang di bootstrap/app.php.
+ * Grup (prefix/name/middleware auth+verified+role:tenant) didefinisikan tunggal di PortalRoutes::tenant();
+ * route fitur ditambahkan oleh modul di app/Modules/{Modul}/routes/tenant.php.
  * Katalog/KDS tenant diisi Modul 7 & 12; scopeBindings pada Modul 4.
  */
 Route::get('/dashboard', function (string $tenant) {

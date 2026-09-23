@@ -14,8 +14,26 @@ Satu aplikasi Laravel, satu database, satu deployment. Batas domain dibuat ekspl
 | `Kitchen` | Kitchen Display System realtime, state machine order, notifikasi. | Modul 12 |
 | `Reporting` | Laporan scoped, rekonsiliasi, ekspor async, withdrawal. | Modul 13 |
 
-Struktur per modul: `app/Modules/{Modul}/{Actions,Data,Services}` + `{Modul}ServiceProvider`.
-Provider terdaftar di `bootstrap/providers.php` (satu provider per bounded context).
+### Struktur per modul (vertical slice)
+
+Setiap modul **memiliki semua file fiturnya** di satu folder, sehingga satu fitur dikerjakan di satu tempat:
+
+```
+app/Modules/{Modul}/
+├── {Modul}ServiceProvider.php   ← extends App\Modules\ModuleServiceProvider (alias: huruf kecil)
+├── Http/Controllers/            ← controller milik fitur modul
+├── Actions/  Data/  Services/   ← logika aplikasi/domain (tanpa HTTP)
+├── routes/{customer,tenant,admin}.php   ← route fitur, dibungkus PortalRoutes::{portal}()
+└── resources/views/             ← view('{alias}::...')
+    └── livewire/                ← <livewire:{alias}::nama-komponen />
+```
+
+`ModuleServiceProvider::boot()` memuat otomatis `routes/*.php`, namespace view `{alias}::`, dan
+namespace Livewire `{alias}::`. Provider terdaftar di `bootstrap/providers.php` (satu per bounded context).
+
+**Shared kernel (tetap di lokasi standar Laravel, dipakai lintas modul):** model Eloquent `app/Models`
+(satu database dipakai banyak modul), middleware `app/Http/Middleware`, layout & komponen UI
+`resources/views/components`, dashboard portal, dan `app/Support` (routing portal, tenancy, token).
 
 ## Aturan dependency (arah menuju kontrak/domain)
 
@@ -34,11 +52,14 @@ Infrastructure (Eloquent, HTTP, vendor)  ------------------------- |
 
 | Konteks | File | Prefix | Name | Middleware |
 |---|---|---|---|---|
-| Pelanggan (publik) | `routes/customer.php` | `kantin/{canteen}` | `customer.*` | `web` |
-| Operator tenant | `routes/tenant.php` | `tenant/{tenant}` | `tenant.*` | `web, auth, verified, role:tenant` |
-| Pengelola kantin | `routes/admin.php` | `admin` | `admin.*` | `web, auth, verified, role:admin` |
+| Pelanggan (publik) | `routes/customer.php` + `app/Modules/*/routes/customer.php` | `kantin/{canteen}` | `customer.*` | `web` |
+| Operator tenant | `routes/tenant.php` + `app/Modules/*/routes/tenant.php` | `tenant/{tenant}` | `tenant.*` | `web, auth, verified, role:tenant` |
+| Pengelola kantin | `routes/admin.php` + `app/Modules/*/routes/admin.php` | `admin` | `admin.*` | `web, auth, verified, role:admin` |
 
-Registrasi di `bootstrap/app.php` (`withRouting(then: ...)`). Model binding & `scopeBindings`
+Grup tiap portal (prefix + name + middleware) didefinisikan **tunggal** di `App\Support\Routing\PortalRoutes`.
+`bootstrap/app.php` (`withRouting(then: ...)`) memakainya untuk route inti portal (dashboard), dan file route
+modul memakainya untuk route fitur — route modul tidak mungkin lupa memasang lapis keamanan portal.
+Test `ModuleConventionTest` menjaga invarian: setiap route `tenant.*`/`admin.*` wajib membawa middleware portalnya. Model binding & `scopeBindings`
 (`{tenant:slug}`, `{canteen:slug}`) **di-wire pada Modul 4** saat model Tenant/Canteen tersedia
 (saat ini parameter berupa string placeholder). Lihat [DOC-02-001](MODULE_REVISION_LOG.md).
 
@@ -59,5 +80,7 @@ Registrasi di `bootstrap/app.php` (`withRouting(then: ...)`). Model binding & `s
 
 ## Konvensi
 - Namespace: `App\Modules\{Modul}\...` (PSR-4 via `App\` → `app/`).
+- Alias view/Livewire modul = nama modul huruf kecil (`catalog::`, `ordering::`, ...).
+- Blade/SFC di `app/Modules/*/resources` dikecualikan dari PHPStan (bukan kelas PHP murni; dicakup test).
 - Nama route: `{konteks}.{aksi}` — unik, dipakai controller/redirect/test/Blade.
 - Blade `{{ }}` selalu ter-escape; `{!! !!}` hanya untuk HTML tersanitasi.
