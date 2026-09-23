@@ -52,6 +52,6 @@
             </dl>
         </div>
 
-        <p class="text-center text-xs text-zinc-500">Pembayaran (QRIS) akan tersedia pada tahap berikutnya.</p>
+        <livewire:payments::order-payment :canteen-slug="request()->route('canteen')" />
     </div>
 </x-layouts.customer>
