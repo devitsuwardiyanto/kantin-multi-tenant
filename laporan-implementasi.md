@@ -31,8 +31,9 @@ kumulatif; setiap pertemuan dibekukan sebagai annotated tag + GitHub Release.
 | 9 | Checkout Atomik, Order Induk, Snapshot, Pre-Order | LULUS | `pertemuan-09`* | `4f3ae95` | #37 | 120 |
 | 10 | Payment Gateway Contract & QRIS Dinamis Sandbox | LULUS | `pertemuan-10`* | `383b50a` | #38 | 127 |
 | 11 | Webhook Idempoten, Settlement, Split, Ledger, Reversal | LULUS | `pertemuan-11`* | `db0cee4` | #39, #40 | 139 |
-| 12 | Kitchen Display Realtime, Status, Notifikasi | LULUS | `pertemuan-12`* | (PR ini) | #41 | 148 |
-| 13–14 | (Laporan/Withdrawal … Rilis) | BELUM | — | — | — | — |
+| 12 | Kitchen Display Realtime, Status, Notifikasi | LULUS | `pertemuan-12`* | `32caca8` | #41 | 148 |
+| 13 | Laporan, Rekonsiliasi, Ekspor, Withdrawal | LULUS | `pertemuan-13`* | (PR ini) | #42 | 160 |
+| 14 | (Hardening, E2E, Deployment, Demo) | BELUM | — | — | — | — |
 
 \* Rantai v2 di `rebuild/modular-v2`; tag dipindah ke commit ini setelah seluruh rantai hijau (versi lama: `arsip-v1/pertemuan-NN`).
 SHA = commit terakhir rentang pertemuan pada `rebuild/modular-v2`.
@@ -153,13 +154,23 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Pertemuan 12 — Kitchen Display System Realtime, Status, dan Notifikasi · LULUS (v2)
 
-- **GIT:** PR #41 → `rebuild/modular-v2` · tag `pertemuan-12` dipindah di akhir rebuild (v1: PR #23/#24).
+- **GIT:** PR #41 (commit akhir `32caca8`) · tag `pertemuan-12` dipindah di akhir rebuild (v1: PR #23/#24).
 - **OUTPUT:** modul **Kitchen** sebagai vertical slice: `KitchenService` (mesin status) + `KitchenException`; event `TenantOrderStatusChanged`/`NewTenantOrderReceived` di `app/Modules/Kitchen/Events`; `TenantChannels` di `app/Modules/Kitchen/Realtime`; **channel privat `tenant.{tenantId}.orders` didaftarkan `KitchenServiceProvider::boot()`**; komponen **`kitchen::kitchen-board`** + halaman `kitchen::tenant.kitchen-board` + route `tenant.kitchen` di `app/Modules/Kitchen/routes/tenant.php`. `SettlePayment` (Payments) memicu `NewTenantOrderReceived` — komunikasi lintas modul lewat event. Live v1: papan KDS kolom Baru/Diterima/Disiapkan/Siap (`evidence/pertemuan-12/screenshots/m12-kitchen.png`).
 - **TAHAP:** 7/7 (mesin status + validasi transisi · event broadcast + channel privat · otorisasi keanggotaan channel · komponen KDS Livewire (booted re-verify) · siaran order baru saat settlement · listener Echo + wire:poll fallback · testing & evidence).
 - **VERIFIKASI:** 148 test (515 assertions; **+9** — `KitchenServiceTest` 3, `TenantChannelsTest` 2 termasuk channel terdaftar oleh modul, `KitchenBoardLivewireTest` 4 termasuk halaman KDS merender komponen modul), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau.
 - **KEAMANAN/DATA:** state machine dengan transisi tak sah ditolak; channel privat hanya untuk anggota tenant (didaftarkan di provider agar tetap aktif saat `route:cache`); KDS `booted()` re-verify membership + `TenantContext`; `NewTenantOrderReceived` `ShouldDispatchAfterCommit`; perubahan status ter-audit.
 - **REVISI MODUL:** DOC-12-001..003 · **004** (KDS milik modul Kitchen; channel via provider; nama channel `.kds` → `.orders`; path diselaraskan; blok output v1 dipindah dari judul Modul 13) · **005** (BUAT FILE: make:class, make:exception FQN, make:livewire kitchen::kitchen-board, make:event FQN ×2, make:test).
 - **KETERBATASAN:** koneksi Reverb live butuh server Reverb (realtime diverifikasi lewat dispatch event + otorisasi channel, bukan WebSocket end-to-end di CI); siklus hold→release terikat penyelesaian pesanan = penyempurnaan lanjutan.
+
+## Pertemuan 13 — Laporan, Rekonsiliasi, Ekspor, dan Withdrawal · LULUS (v2)
+
+- **GIT:** PR #42 → `rebuild/modular-v2` · tag `pertemuan-13` dipindah di akhir rebuild (v1: PR #25/#26).
+- **OUTPUT:** modul **Reporting**: `TenantLedgerReport` (summary/reconcile/rows), `TenantLedgerExportController` (CSV) di `app/Modules/Reporting/Http/Controllers`, komponen **`reporting::finance-panel`** + halaman + route `tenant.finance`/`tenant.finance.export`; modul **Payments**: `WithdrawalService` + `WithdrawalException`, komponen **`payments::withdrawal-review`** + halaman + route `admin.withdrawals.index`. Live v1: panel keuangan — Saldo Rp 42.500, Penjualan Kotor Rp 50.000, Komisi Rp 7.500, Rekonsiliasi "cocok" (`evidence/pertemuan-13/screenshots/m13-finance.png`).
+- **TAHAP:** 7/7 (laporan dari ledger · rekonsiliasi saldo vs ledger · ekspor CSV · withdrawal hold · approve/reject + satu aktif per tenant · UI tenant/admin · testing & evidence).
+- **VERIFIKASI:** 160 test (567 assertions; **+12** — `WithdrawalServiceTest` 5, `TenantLedgerReportTest` 2, `FinanceFlowTest` 5 termasuk kedua halaman merender komponen modulnya), **Redis + MariaDB nyata**; PHPStan 0; Pint clean; CI hijau.
+- **KEAMANAN/DATA:** withdrawal atomik berbasis ledger (hold → withdrawal_debit / release), satu aktif per tenant (UNIQUE `active_tenant_lock`), validasi nominal/saldo/rekening verified; CHECK saldo non-negatif; rekonsiliasi saldo materialisasi == akumulasi ledger; ekspor CSV ter-scope TenantContext; `finance-panel` re-verify membership (403); `withdrawal-review` hanya kantin yang dikelola (lintas kantin 403).
+- **REVISI MODUL:** DOC-13-001..003 · **004** (keuangan di modul Reporting, penarikan di modul Payments; path termasuk `app/Queries/...` diselaraskan; blok output v1 dipindah dari judul Modul 14) · **005** (BUAT FILE: make:class, make:controller FQN --invokable, make:exception FQN, make:livewire reporting::finance-panel & payments::withdrawal-review, make:test).
+- **KETERBATASAN:** reject/refund gagal-tertutup bila dana telah ditarik; transfer bank nyata (payout provider) di luar lingkup.
 
 ---
 
@@ -173,15 +184,15 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 
 ## Revisi v2 — Modul sebagai Vertical Slice (2026-09-23) · DIKERJAKAN BERTAHAP
 
-- **STATUS:** Pertemuan 2–12 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 13–14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
-- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#41 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
+- **STATUS:** Pertemuan 2–13 dibangun ulang dan LULUS di `rebuild/modular-v2`; Pertemuan 14 menyusul dengan pola yang sama. `main` dan tag lama belum diubah.
+- **GIT:** tag arsip `arsip-v1/pertemuan-01…14` (rantai lama utuh); branch integrasi `rebuild/modular-v2` dari akhir Pertemuan 1 (`87d0de7`); PR #29–#42 per pertemuan (rebase merge, CI hijau). Satu kali force-push (with-lease, atas persetujuan pemilik) ke `rebuild/modular-v2` untuk menyisipkan blok BUAT FILE Modul 2–4 ke rentang pertemuannya.
 - **OUTPUT:** setiap modul memiliki `Http/Controllers`, `Http/Requests`, `routes/{portal}.php`, `resources/views` (+ `livewire/`) sendiri; model, policy, middleware, layout, dan komponen UI tetap shared kernel; `modul_praktikum/` per pertemuan.
 - **TAHAP:** per pertemuan: putar ulang commit v1 → pindahkan berkas fitur ke modul pemilik → quality gate → revisi DOCX in-body (path, Output Nyata b, BUAT FILE) → pecah ulang `modul_praktikum/` → PR → CI → merge.
 - **PERUBAHAN:** `ModuleServiceProvider`, `PortalRoutes` (`customer/tenant/admin/web`), limiter & konfigurasi middleware milik modul (`EncryptCookies::except` di Ordering, `PreventRequestForgery::except` di Payments), scope `CommissionScheme::effectiveAt()`, `ModuleConventionTest`, `CommissionScheduleBoundaryTest`.
 - **VERIFIKASI:** tiap pertemuan Pint + PHPStan 0 + suite penuh di MariaDB nyata + CI; perintah BUAT FILE dijalankan di worktree bersih dan berkas hasilnya dicocokkan dengan berkas baru pertemuan (selisih hanya screenshot evidence / `mariadb-dump`).
 - **KEAMANAN/DATA:** tak ada `.env`/secret di Git; worktree verifikasi memakai salinan `.env` di scratchpad (di luar repo); tidak ada FLUSHDB/penghapusan global; tidak ada dependency baru.
-- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005, DOC-09-004/005, DOC-10-004/005, DOC-11-004/005/006, DOC-12-004/005.
+- **REVISI MODUL:** DOC-02-002/003, DOC-03-004, DOC-04-003/004, DOC-05-004/005/006, DOC-06-004/005, DOC-07-004/005, DOC-08-004/005, DOC-09-004/005, DOC-10-004/005, DOC-11-004/005/006, DOC-12-004/005, DOC-13-004/005.
 - **TEMUAN:** DOCX v8 v1 (commit docs P8–P14) menyisipkan blok Output Nyata DI DALAM paragraf judul modul berikutnya (21 paragraf bersarang di `main`; skema OOXML tidak valid). Rantai v2 memperbaikinya dengan fungsi `repair` (idempoten, konten utuh) — blok dipindah ke badan modul pemiliknya sebelum "Observe".
 - **KETERBATASAN:** render DOCX penuh per halaman `TIDAK DIUJI` (tanpa LibreOffice/Word-automation; struktur XML, idempotensi patch, dan pratinjau Quick Look/`textutil` diverifikasi).
-- **BERIKUTNYA:** Pertemuan 13 (laporan/rekonsiliasi/ekspor → modul Reporting; withdrawal → modul Payments), lalu 14.
+- **BERIKUTNYA:** Pertemuan 14 (hardening: SecurityHeaders, limiter `qris-webhook` milik modul Payments, uji E2E, deployment/demo), lalu pemindahan tag `pertemuan-02…14` + `main`.
 
