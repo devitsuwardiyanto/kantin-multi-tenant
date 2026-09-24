@@ -12,19 +12,26 @@
         <x-status-badge :status="$tenant->status">{{ $tenant->status }}</x-status-badge>
     </div>
 
-    <section class="mt-6">
-        <h2 class="font-semibold">Skema Komisi (effective-dated)</h2>
-        <ul class="mt-2 space-y-1 text-sm">
+    <section class="mt-6 max-w-xl rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <h2 class="font-semibold">Ubah komisi — {{ $tenant->display_name }}</h2>
+        <p class="mt-1 text-sm">Komisi aktif saat ini:
+            <strong>{{ $activeCommission ? number_format((float) $activeCommission->commission_rate * 100, 2, ',', '.').'%' : '—' }}</strong></p>
+        <form method="POST" action="{{ route('admin.tenants.commission.store', $tenant) }}" class="mt-3 space-y-3">
+            @csrf
+            <x-input name="commission_rate" label="Persentase komisi baru (%)" type="number" step="0.01" required />
+            <x-input name="effective_at" label="Tanggal berlaku (hanya masa mendatang)" type="datetime-local" min="{{ now()->format('Y-m-d\\TH:i') }}" required />
+            <p class="border-s-2 border-red-600 bg-red-50 px-3 py-2 text-xs text-zinc-700 dark:bg-red-950/30 dark:text-zinc-300">
+                Versi baru berlaku mulai tanggal tersebut. Setiap tenant_order menyimpan snapshot komisi sehingga order lama tidak berubah.</p>
+            <x-button type="submit" class="w-full">Simpan perubahan</x-button>
+        </form>
+        <h3 class="mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Riwayat perubahan</h3>
+        <ul class="mt-2 space-y-1 text-sm" data-test="commission-history">
             @foreach ($commissions as $c)
-                <li>{{ number_format((float) $c->commission_rate * 100, 2) }}% — {{ $c->valid_from }} s/d {{ $c->valid_to ?? 'sekarang' }}</li>
+                <li>{{ rtrim(rtrim(number_format((float) $c->commission_rate * 100, 2, ',', '.'), '0'), ',') }}% → berlaku {{ $c->valid_from->translatedFormat('j M Y H:i') }}
+                    @if ($c->valid_to) s/d {{ $c->valid_to->translatedFormat('j M Y H:i') }} @endif
+                    · oleh {{ $commissionActors[$c->id] ?? 'sistem' }}</li>
             @endforeach
         </ul>
-        <form method="POST" action="{{ route('admin.tenants.commission.store', $tenant) }}" class="mt-3 flex flex-wrap items-end gap-2">
-            @csrf
-            <x-input name="commission_rate" label="Komisi baru (%)" type="number" step="0.01" required />
-            <x-input name="effective_at" label="Berlaku sejak" type="datetime-local" required />
-            <x-button type="submit">Jadwalkan</x-button>
-        </form>
     </section>
 
     <section class="mt-8">

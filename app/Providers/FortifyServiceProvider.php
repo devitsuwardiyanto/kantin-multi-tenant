@@ -4,11 +4,14 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
+use App\Support\Auth\LoginLockout;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -27,6 +30,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureActions();
+        $this->configureAuthentication();
         $this->configureViews();
         $this->configureRateLimiting();
     }
@@ -38,6 +42,39 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+    }
+
+    /**
+     * UC-19: verifikasi kredensial + status akun, pesan kesalahan generik, dan penguncian akun
+     * (5x gagal/10 menit -> terkunci 15 menit). Akun nonaktif ditolak dengan pesan yang sama
+     * agar keberadaan akun tidak terbocorkan.
+     */
+    private function configureAuthentication(): void
+    {
+        Fortify::authenticateUsing(function (Request $request): User {
+            $lockout = app(LoginLockout::class);
+            $email = (string) $request->input(Fortify::username());
+
+            if ($lockout->isLocked($email)) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => 'Akun terkunci sementara karena terlalu banyak percobaan gagal. Coba lagi dalam '.$lockout->minutesRemaining($email).' menit.',
+                ]);
+            }
+
+            $user = User::query()->where('email', $email)->first();
+
+            if ($user !== null && $user->isActive() && Hash::check((string) $request->input('password'), $user->password)) {
+                $lockout->clear($email);
+
+                return $user;
+            }
+
+            $lockout->recordFailure($email);
+
+            throw ValidationException::withMessages([
+                Fortify::username() => 'Surel atau kata sandi tidak sesuai.',
+            ]);
+        });
     }
 
     /**
@@ -64,9 +101,8 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
-
-            return Limit::perMinute(5)->by($throttleKey);
+            // Lapis per-IP terhadap brute force massal; penguncian per akun ditangani LoginLockout.
+            return Limit::perMinute(20)->by($request->ip() ?? 'unknown');
         });
 
         RateLimiter::for('passkeys', function (Request $request) {
