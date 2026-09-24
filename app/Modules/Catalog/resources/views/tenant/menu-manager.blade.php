@@ -1,4 +1,7 @@
 <x-layouts.tenant title="Kelola Menu — {{ $tenant->display_name }}">
-    <h1 class="mb-4 text-xl font-semibold">Kelola Menu</h1>
+    <div class="mb-4 flex items-baseline justify-between">
+        <h1 class="text-xl font-semibold">Kelola Menu</h1>
+        <a href="{{ route('tenant.modifier-manager', $tenant) }}" class="text-sm underline" wire:navigate>Kelola Modifier →</a>
+    </div>
     <livewire:catalog::menu-manager :tenant-id="$tenant->id" />
 </x-layouts.tenant>
