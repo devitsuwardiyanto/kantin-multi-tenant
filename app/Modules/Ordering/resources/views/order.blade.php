@@ -4,7 +4,7 @@
     <div class="mx-auto max-w-2xl space-y-6">
         {{-- UC-07: layar pembayaran QRIS tampil paling atas selama pesanan menunggu pembayaran. --}}
         <livewire:payments::order-payment :canteen-slug="request()->route('canteen')" />
-        <div class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <div id="lacak" class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <p class="text-xs text-zinc-500">Nomor Pesanan</p>

@@ -169,8 +169,27 @@ new class extends Component
             @endif
 
             @if ($order->status === 'paid')
-                <div class="bg-green-100 px-4 py-3 text-sm font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-300" role="status">
-                    Pembayaran berhasil. Terima kasih!
+                {{-- UC-08: hasil verifikasi pembayaran di UI. --}}
+                <div data-test="payment-verified" role="status">
+                    <div class="flex size-14 items-center justify-center bg-green-700 text-3xl font-bold text-white" aria-hidden="true">✓</div>
+                    <h3 class="mt-3 text-3xl font-extrabold leading-tight">Pembayaran terverifikasi</h3>
+                    <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Pembayaran berhasil. Callback tervalidasi (signature sah, nominal cocok); settlement diproses tepat satu kali.</p>
+                    <dl class="mt-4 divide-y divide-zinc-200 border-2 border-zinc-900 text-sm dark:divide-zinc-700 dark:border-zinc-100">
+                        <div class="flex justify-between px-3 py-2"><dt>Nomor pesanan</dt><dd class="font-bold">#{{ $order->order_number }}</dd></div>
+                        <div class="flex justify-between px-3 py-2"><dt>Referensi pembayaran</dt><dd class="font-bold">{{ $payment?->payment_reference }}</dd></div>
+                        <div class="flex items-center justify-between px-3 py-2"><dt>Status</dt><dd class="bg-green-700 px-2 py-0.5 text-xs font-bold tracking-widest text-white">SETTLEMENT</dd></div>
+                        <div class="flex justify-between px-3 py-2"><dt>Dibayar</dt><dd class="font-bold">Rp{{ number_format($payment?->amount ?? $order->grand_total_amount, 0, ',', '.') }}@if ($payment?->settled_at) · {{ $payment->settled_at->setTimezone(config('app.display_timezone'))->format('H.i') }} WIB @endif</dd></div>
+                    </dl>
+                    <p class="mt-2 text-xs text-zinc-500">Dana otomatis dipecah ke tiap tenant (UC-10) dan pesanan diteruskan ke dapur.</p>
+                    <a href="#lacak" class="mt-4 flex min-h-12 items-center justify-center bg-red-600 font-bold text-white">Lacak pesanan saya →</a>
+                </div>
+            @elseif ($payment?->status === 'needs_review')
+                <div class="border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 dark:bg-amber-900/30 dark:text-amber-200" role="status" data-test="payment-review">
+                    Pembayaran diterima tetapi perlu ditinjau pengelola kantin. Mohon hubungi kasir.
+                </div>
+            @elseif ($payment?->status === 'settlement_failed')
+                <div class="bg-zinc-100 px-4 py-3 text-sm font-semibold dark:bg-zinc-800" role="status" data-test="payment-processing">
+                    Pembayaran diterima dan sedang diproses. Halaman diperbarui otomatis.
                 </div>
             @elseif ($order->status === 'cancelled')
                 <div class="bg-zinc-100 px-4 py-3 text-sm font-semibold dark:bg-zinc-800" role="status" data-test="payment-cancelled">
