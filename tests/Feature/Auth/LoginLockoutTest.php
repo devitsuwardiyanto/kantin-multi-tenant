@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserTenantRole;
 use App\Support\Auth\LoginLockout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -18,6 +19,16 @@ use Tests\TestCase;
 class LoginLockoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Limiter per-IP `login` (20/menit) memakai cache bersama; di CI (Redis) hitungannya terbawa
+     * antar-test sehingga dibersihkan agar setiap skenario mandiri.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        RateLimiter::clear(md5('login127.0.0.1'));
+    }
 
     private function attempt(string $email, string $password): TestResponse
     {
