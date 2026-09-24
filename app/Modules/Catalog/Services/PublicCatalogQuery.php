@@ -4,6 +4,7 @@ namespace App\Modules\Catalog\Services;
 
 use App\Models\Canteen;
 use App\Models\Menu;
+use App\Models\MenuCategory;
 use App\Models\Tenant;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -49,6 +50,48 @@ final class PublicCatalogQuery
             ->orderBy('name')
             ->paginate(16)
             ->withQueryString();
+    }
+
+    /**
+     * UC-01: seluruh menu (termasuk yang habis, alur 4a) milik tenant aktif satu kantin, dengan
+     * pencarian nama menu/tenant/kategori serta saringan tenant dan nama kategori.
+     *
+     * @return Collection<int, Menu>
+     */
+    public function browseAll(Canteen $canteen, string $search = '', ?int $tenantId = null, ?string $category = null): Collection
+    {
+        return Menu::query()
+            ->withoutGlobalScope('tenant')
+            ->whereHas('tenant', function ($query) use ($canteen): void {
+                $query->where('canteen_id', $canteen->id)->where('status', 'active');
+            })
+            ->when($tenantId !== null, fn ($query) => $query->where('tenant_id', $tenantId))
+            ->when($category !== null && $category !== '', fn ($query) => $query->whereHas('category',
+                fn ($q) => $q->withoutGlobalScope('tenant')->where('name', $category)))
+            ->when($search !== '', function ($query) use ($search): void {
+                $like = '%'.$search.'%';
+                $query->where(function ($q) use ($like): void {
+                    $q->where('name', 'like', $like)
+                        ->orWhere('description', 'like', $like)
+                        ->orWhereHas('tenant', fn ($t) => $t->where('display_name', 'like', $like))
+                        ->orWhereHas('category', fn ($c) => $c->withoutGlobalScope('tenant')->where('name', 'like', $like));
+                });
+            })
+            ->with(['tenant:id,display_name,slug', 'category' => fn ($q) => $q->withoutGlobalScope('tenant')->select('id', 'name')])
+            ->orderBy('tenant_id')->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Nama kategori unik lintas tenant aktif (untuk chip saringan katalog).
+     *
+     * @return SupportCollection<int, string>
+     */
+    public function categoryNames(Canteen $canteen): SupportCollection
+    {
+        return MenuCategory::query()->withoutGlobalScope('tenant')
+            ->whereHas('tenant', fn ($query) => $query->where('canteen_id', $canteen->id)->where('status', 'active'))
+            ->orderBy('name')->distinct()->pluck('name');
     }
 
     /** @return SupportCollection<int, Tenant> */

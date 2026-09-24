@@ -2,15 +2,20 @@
 
 use App\Models\Canteen;
 use App\Modules\Catalog\Services\PublicCatalogQuery;
+use App\Modules\Catalog\Services\TenantOpeningHours;
+use App\Modules\Kitchen\Services\WaitTimeEstimator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithPagination;
 
+/**
+ * Katalog publik lintas tenant (UC-01) dengan estimasi waktu tunggu per tenant (UC-11).
+ * Menu habis tetap tampil nonaktif (alur 4a); tenant tutup menampilkan jam buka (alur 4b).
+ * Komponen memuat ulang tiap 5 detik sehingga perubahan ketersediaan oleh tenant (UC-14)
+ * tampil ≤ 5 detik tanpa memuat ulang halaman.
+ */
 new class extends Component
 {
-    use WithPagination;
-
     public string $canteenSlug = '';
 
     #[Url]
@@ -19,19 +24,17 @@ new class extends Component
     #[Url]
     public ?int $tenantId = null;
 
+    #[Url]
+    public ?string $category = null;
+
     public function mount(string $canteenSlug): void
     {
         $this->canteenSlug = $canteenSlug;
     }
 
-    public function updatingSearch(): void
+    public function filterCategory(?string $name): void
     {
-        $this->resetPage();
-    }
-
-    public function updatingTenantId(): void
-    {
-        $this->resetPage();
+        $this->category = $name;
     }
 
     #[Computed]
@@ -40,12 +43,15 @@ new class extends Component
         return Canteen::query()->where('slug', $this->canteenSlug)->where('status', 'active')->first();
     }
 
+    /** @return \Illuminate\Support\Collection<int, \Illuminate\Database\Eloquent\Collection<int, \App\Models\Menu>> */
     #[Computed]
-    public function menus(): ?\Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function groups(): \Illuminate\Support\Collection
     {
         $canteen = $this->canteen();
 
-        return $canteen ? app(PublicCatalogQuery::class)->browse($canteen, $this->search, $this->tenantId) : null;
+        return $canteen
+            ? app(PublicCatalogQuery::class)->browseAll($canteen, $this->search, $this->tenantId, $this->category)->groupBy('tenant_id')
+            : collect();
     }
 
     #[Computed]
@@ -55,43 +61,76 @@ new class extends Component
 
         return $canteen ? app(PublicCatalogQuery::class)->activeTenants($canteen) : collect();
     }
+
+    #[Computed]
+    public function categories(): \Illuminate\Support\Collection
+    {
+        $canteen = $this->canteen();
+
+        return $canteen ? app(PublicCatalogQuery::class)->categoryNames($canteen) : collect();
+    }
 };
 ?>
 
-<div class="space-y-4">
+<div class="space-y-4" wire:poll.5s>
     @if (! $this->canteen)
         <x-empty-state title="Kantin tidak ditemukan" description="Pindai QR meja untuk membuka katalog." />
     @else
+        @php($hours = app(TenantOpeningHours::class))
+        @php($wait = app(WaitTimeEstimator::class))
         <div class="flex flex-col gap-2">
-            <input type="search" wire:model.live.debounce.300ms="search" placeholder="Cari menu…"
+            <input type="search" wire:model.live.debounce.300ms="search" placeholder="Cari menu atau tenant…"
                 class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800" />
-            <select wire:model.live="tenantId"
+            <select wire:model.live="tenantId" aria-label="Saring tenant"
                 class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800">
                 <option value="">Semua tenant</option>
                 @foreach ($this->tenants as $tenant)
                     <option value="{{ $tenant->id }}" wire:key="tenant-{{ $tenant->id }}">{{ $tenant->display_name }}</option>
                 @endforeach
             </select>
+            <div class="flex gap-2 overflow-x-auto pb-1" data-test="category-chips">
+                <button type="button" wire:click="filterCategory(null)" @class(['min-h-9 shrink-0 rounded-full border px-3 text-sm', 'border-red-600 bg-red-600 text-white' => ! $category, 'border-zinc-300' => $category])>Semua</button>
+                @foreach ($this->categories as $name)
+                    <button type="button" wire:key="chip-{{ $name }}" wire:click="filterCategory(@js($name))" @class(['min-h-9 shrink-0 rounded-full border px-3 text-sm', 'border-red-600 bg-red-600 text-white' => $category === $name, 'border-zinc-300' => $category !== $name])>{{ $name }}</button>
+                @endforeach
+            </div>
         </div>
 
-        <div wire:loading class="text-sm text-zinc-500">Memuat…</div>
-
-        @forelse ($this->menus as $menu)
-            <div wire:key="menu-{{ $menu->id }}" class="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="truncate font-medium">{{ $menu->name }}</p>
-                        <p class="truncate text-xs text-zinc-500">{{ $menu->tenant->display_name }} · {{ $menu->category?->name }}</p>
-                    </div>
-                    <p class="shrink-0 font-semibold">Rp {{ number_format($menu->base_price, 0, ',', '.') }}</p>
+        @forelse ($this->groups as $menus)
+            @php($tenant = $menus->first()->tenant)
+            @php($open = $hours->isOpen($tenant))
+            <section wire:key="group-{{ $tenant->id }}" data-test="tenant-group">
+                <div class="flex items-baseline justify-between border-b-2 border-zinc-900 pb-1 dark:border-zinc-100">
+                    <h2 class="text-sm font-extrabold uppercase tracking-wide">{{ $tenant->display_name }}</h2>
+                    @if ($open)
+                        <span class="text-xs font-semibold text-red-600">Antrean {{ $wait->label($tenant) }}</span>
+                    @else
+                        <span class="text-xs font-semibold text-zinc-500">Tutup · Buka pukul {{ $hours->opensAtToday($tenant) ?? '—' }}</span>
+                    @endif
                 </div>
-            </div>
+                <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    @foreach ($menus as $menu)
+                        @php($sellable = $open && $menu->is_available && $menu->stock_qty > 0)
+                        <li wire:key="menu-{{ $menu->id }}" @class(['flex items-center gap-3 py-3', 'opacity-50' => ! $sellable]) data-sellable="{{ $sellable ? '1' : '0' }}">
+                            @if ($menu->photoUrl())
+                                <img src="{{ $menu->photoUrl() }}" alt="" class="size-14 shrink-0 rounded object-cover">
+                            @else
+                                <span class="flex size-14 shrink-0 items-center justify-center rounded bg-zinc-200 text-sm font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">{{ Str::upper(Str::substr($menu->name, 0, 2)) }}</span>
+                            @endif
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate font-semibold">{{ $menu->name }}</p>
+                                <p class="truncate text-xs text-zinc-500">{{ $menu->description ? $menu->description.' · ' : '' }}± {{ $menu->prep_minutes }} mnt</p>
+                                <p class="text-sm font-semibold">Rp{{ number_format($menu->base_price, 0, ',', '.') }}</p>
+                            </div>
+                            @unless ($menu->is_available && $menu->stock_qty > 0)
+                                <span class="shrink-0 rounded border border-zinc-300 px-2 py-0.5 text-[10px] font-bold text-zinc-600">HABIS</span>
+                            @endunless
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
         @empty
-            <x-empty-state title="Belum ada menu" description="Tidak ada menu tersedia untuk filter ini." />
+            <x-empty-state title="Menu tidak ditemukan" description="Coba kata kunci atau kategori lain." />
         @endforelse
-
-        @if ($this->menus)
-            <div>{{ $this->menus->links() }}</div>
-        @endif
     @endif
 </div>

@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Menu extends Model
 {
@@ -17,8 +19,11 @@ class Menu extends Model
     /** @use HasFactory<MenuFactory> */
     use HasFactory;
 
+    // UC-13 alur 3a: menu yang dihapus tetap ada untuk riwayat transaksi.
+    use SoftDeletes;
+
     // tenant_id & category_id di-set eksplisit/aturan domain, bukan mass assignment pelanggan.
-    protected $fillable = ['name', 'base_price', 'stock_qty', 'is_available', 'prep_minutes'];
+    protected $fillable = ['name', 'description', 'base_price', 'stock_qty', 'is_available', 'prep_minutes'];
 
     protected function casts(): array
     {
@@ -28,6 +33,12 @@ class Menu extends Model
             'is_available' => 'boolean',
             'prep_minutes' => 'integer',
         ];
+    }
+
+    /** URL publik foto WebP, atau null bila belum ada foto. */
+    public function photoUrl(): ?string
+    {
+        return $this->photo_path !== null ? Storage::disk('public')->url($this->photo_path) : null;
     }
 
     /** @return BelongsTo<Tenant, $this> */
