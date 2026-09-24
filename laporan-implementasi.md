@@ -130,3 +130,21 @@ Keputusan dependency menunggu persetujuan: **(a)** `chillerlan/php-qrcode` (rast
 - **KETERBATASAN:** render DOCX penuh per halaman `TIDAK DIUJI` (tanpa LibreOffice/Word-automation; struktur XML, idempotensi patch, dan pratinjau Quick Look/`textutil` diverifikasi).
 - **BERIKUTNYA:** Pertemuan 8 (keranjang Redis → komponen `ordering::cart`), lalu 9–14; checkout M9 memakai `CommissionScheme::effectiveAt()`.
 
+
+---
+
+## Rantai v3 — Use Case SRS per Pertemuan (2026-09-24) · DIKERJAKAN BERTAHAP
+
+- **STATUS:** mulai Pertemuan 5 setiap pertemuan menuntaskan minimal satu use case SRS v2 (23 UC, tuntas pada Pertemuan 14). Pertemuan 5–7 LULUS (10 dari 23 UC); Pertemuan 8–14 menyusul.
+- **GIT:** branch integrasi `rebuild/usecase-v3`; rentang v2 Pertemuan 5–14 diarsipkan sebagai tag `arsip-v2/pertemuan-05…14`; satu PR per pertemuan (rebase merge, CI hijau): P5 #44 (+ #45 langkah Windows, #46 tema kode, #47 aturan, #48–#51 konversi Modul 1–4), P6 #52, P7 PR ini. `main` dan tag `pertemuan-NN` dipindah setelah rantai hijau.
+- **OUTPUT:** setiap modul DOCX memuat bagian **Use Case SRS yang Dituntaskan** (deskripsi SRS + mockup `#uc-NN`), **Tahap 8** penuntasan use case, dan **Output Nyata** dari browser; seluruh langkah praktikum ditulis ulang untuk Windows (cmd + VS Code, ServBay) dengan isi berkas lengkap dan tema kode Cyan Light.
+- **TAHAP:** per pertemuan: putar ulang kode v2 → implementasi use case (Tahap 8) → uji otomatis + uji browser → revisi DOCX (UC, langkah Windows, tema) → verifikasi langkah manual di worktree bersih → `modul_praktikum/` → PR → CI → merge.
+- **PERUBAHAN:**
+  - **P5 — UC-19 Autentikasi** (lockout 5x/10 menit, pesan generik, redirect per peran, sesi 8 jam) + **UC-21 Kelola Tenant & Komisi** (onboarding owner + rekening, aktif/nonaktif, riwayat komisi); 93 test.
+  - **P6 — UC-22 Kelola Meja & QR** (QR SVG siap unduh/cetak via `bacon/bacon-qr-code`, nonaktif/aktif meja) + **UC-02 Pindai QR** (sambutan meja, tenant buka/tutup, pesan QR tidak valid, tolak di luar jam operasional WIB); 109 test.
+  - **P7 — UC-13 Kelola Menu & Stok** (ubah, hapus lunak, deskripsi, foto WebP maks 800 px via GD, cari/saring kategori) + **UC-14 Tandai Habis** (sakelar satu klik + audit) + **UC-01 Telusuri** (menu per tenant, menu habis tampil nonaktif, tenant tutup + jam buka, chip kategori, poll 5 detik) + **UC-11 Estimasi Waktu Tunggu** (antrean `accepted`/`preparing` ÷ kapasitas paralel 2 + waktu siap, rentang “± a–b mnt”); 124 test.
+- **VERIFIKASI:** per pertemuan Pint + PHPStan 0 + suite penuh di MariaDB nyata dengan cache/sesi array **dan** Redis + CI; uji browser (puppeteer + Chrome) pada server demo; langkah manual Windows dijalankan ulang di worktree bersih (cmd diterjemahkan) — hasil Tahap 7 identik dengan kode v2 dan hasil Tahap 8 identik dengan kode akhir (P7: 117 → 124 test).
+- **KEAMANAN/DATA:** `tenant_id` hanya dari TenantContext/keanggotaan; komponen Livewire memverifikasi ulang keanggotaan di `booted()`; foto disimpan dengan nama UUID per tenant; menu dihapus lunak agar riwayat pesanan tetap utuh; tanpa `.env`/secret di Git; tanpa FLUSHDB.
+- **REVISI MODUL:** DOC-00-001 (tema Cyan Light) · DOC-01-007 · DOC-02-004 · DOC-03-005 · DOC-04-005 · DOC-05-007/008 · DOC-06-006/007 · DOC-07-006/007 (DOC-07-001 foto menu selesai tanpa dependency baru).
+- **KETERBATASAN:** CRUD grup/opsi modifier dan dialog detail menu (Tahap 3/6 Modul 7) diimplementasikan bersama UC-04 di Pertemuan 8; render DOCX penuh per halaman `TIDAK DIUJI` (tanpa LibreOffice/Word).
+- **BERIKUTNYA:** Pertemuan 8 — UC-03 Kelola Keranjang Multi-Tenant + UC-04 Kustomisasi Item (modifier).
