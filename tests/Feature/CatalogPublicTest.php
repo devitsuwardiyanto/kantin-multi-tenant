@@ -46,10 +46,11 @@ class CatalogPublicTest extends TestCase
         [, $otherTenant] = $this->canteenWithTenant();
         $this->menu($otherTenant, ['name' => 'Menu Kantin Lain']);
 
+        // SRS UC-01 alur 4a: menu habis tetap tampil tetapi nonaktif dan berlabel HABIS.
         Livewire::test('catalog::menu-catalog', ['canteenSlug' => $canteen->slug])
-            ->assertSee('Nasi Goreng')
-            ->assertDontSee('Habis')
-            ->assertDontSee('Kosong')
+            ->assertSeeInOrder(['data-sellable="0"', 'Habis', 'HABIS'], false)
+            ->assertSeeInOrder(['data-sellable="0"', 'Kosong', 'HABIS'], false)
+            ->assertSeeInOrder(['data-sellable="1"', 'Nasi Goreng'], false)
             ->assertDontSee('Menu Kantin Lain');
     }
 
