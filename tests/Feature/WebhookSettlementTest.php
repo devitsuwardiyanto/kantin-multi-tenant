@@ -76,7 +76,8 @@ class WebhookSettlementTest extends TestCase
 
     private function postWebhook(string $reference, string $eventId, string $status = 'success', ?string $overrideSignature = null): TestResponse
     {
-        $body = json_encode(['event_id' => $eventId, 'payment_reference' => $reference, 'status' => $status], JSON_THROW_ON_ERROR);
+        $amount = (int) Payment::query()->where('payment_reference', $reference)->value('amount');
+        $body = json_encode(['event_id' => $eventId, 'payment_reference' => $reference, 'status' => $status, 'amount' => $amount], JSON_THROW_ON_ERROR);
         $signature = $overrideSignature ?? hash_hmac('sha256', $body, self::SECRET);
 
         return $this->call('POST', '/webhooks/qris', [], [], [], [

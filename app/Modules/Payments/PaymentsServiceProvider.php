@@ -3,6 +3,7 @@
 namespace App\Modules\Payments;
 
 use App\Modules\ModuleServiceProvider;
+use App\Modules\Payments\Console\ReprocessFailedSettlements;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Gateways\FakeQrisGateway;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -33,6 +34,11 @@ final class PaymentsServiceProvider extends ModuleServiceProvider
 
         // Webhook provider tak mengirim token CSRF; keaslian dijamin signature HMAC atas raw body.
         PreventRequestForgery::except('webhooks/*');
+
+        // UC-10 alur 3a: proses ulang settlement yang gagal.
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReprocessFailedSettlements::class]);
+        }
     }
 
     protected function moduleAlias(): string
