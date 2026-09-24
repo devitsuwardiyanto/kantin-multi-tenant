@@ -1,15 +1,13 @@
 # Requirements Traceability Matrix (RTM)
 
-Sumber requirement: `references/SRS_Aplikasi_Kantin_Multi_Tenant_ISO29148 v2.docx` (**SRS v2**).
-Catatan: modul v7 mengklaim basis "SRS v1.1"; RTM ini mengikat ke **SRS v2** sebagai otoritas
-lebih tinggi (lihat DOC-01-002). Ekstraksi requirement lengkap dilakukan sebelum Modul 3 (data).
+Sumber requirement: `docs/SRS_Aplikasi_Kantin_Multi_Tenant_ISO29148 v2.pdf` (**SRS v2**, 23 use case) dan
+mockup `docs/Mockup UI Kantin Multi-Tenant-v2.dc.html` (layar `#uc-NN`). Rantai v3: mulai Pertemuan 5 setiap
+pertemuan menuntaskan minimal satu use case; matriks ini diperbarui per pertemuan dan dilengkapi pada Pertemuan 14.
 
-| Req ID | Ringkasan | Modul | Implementasi | Test | Status |
+| Use case | Kebutuhan | Pertemuan | Implementasi utama | Test penerimaan | Status |
 |---|---|---|---|---|---|
-| _pending_ | Ekstraksi SRS v2 belum dilakukan | — | — | — | TODO |
+| UC-19 Autentikasi Pengguna | FR-TEN-01 | 5 | `app/Providers/FortifyServiceProvider.php` (authenticateUsing), `app/Support/Auth/LoginLockout.php`, `app/Http/Controllers/DashboardRedirectController.php`, `config/session.php` | `tests/Feature/Auth/LoginLockoutTest.php` + uji browser | PASS |
+| UC-21 Kelola Tenant & Skema Komisi | FR-ADM-01 | 5 | `app/Modules/Admin/Services/{CreateTenant,ChangeTenantStatus,ChangeCommissionSchedule}.php`, `app/Modules/Admin/Http/Controllers/*`, view `admin::tenants.*` | `tests/Feature/TenantOnboardingTest.php`, `AdminManagementTest`, `CommissionScheduleBoundaryTest` + uji browser | PASS |
 
-## Rencana ekstraksi
-1. Ekstrak daftar requirement fungsional & non-fungsional dari SRS v2 (§ kebutuhan, § antarmuka, § batasan).
-2. Audit diff v1.1 → v2 (bila v1.1 tersedia; saat ini hanya v2 yang ada) dan catat dampak ketertelusuran.
-3. Petakan tiap requirement ke modul (1–14), file implementasi, dan test penerimaan.
-4. Tandai status: PASS / FAIL / DEFERRED pada Modul 14.
+Rencana: P6 UC-22, UC-02 · P7 UC-13, UC-14, UC-01, UC-11 · P8 UC-03, UC-04 · P9 UC-05, UC-06 · P10 UC-07 ·
+P11 UC-08, UC-10 · P12 UC-15, UC-09, UC-12 · P13 UC-16, UC-17, UC-18, UC-20, UC-23 · P14 uji penerimaan 23 UC.
