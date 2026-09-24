@@ -3,12 +3,8 @@
 use App\Models\CustomerSession;
 use App\Modules\Ordering\Data\CartView;
 use App\Modules\Ordering\Exceptions\CartException;
-use App\Modules\Ordering\Exceptions\CheckoutException;
 use App\Modules\Ordering\Services\CartService;
-use App\Modules\Ordering\Services\CheckoutService;
 use App\Modules\Ordering\Services\ResolveCustomerSession;
-use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -19,18 +15,15 @@ use Livewire\Component;
  * merevalidasi harga/stok dari basis data. Tanpa sesi aktif, keranjang tidak bisa diisi.
  * UC-03: item dikelompokkan per tenant dengan subtotal, pajak, biaya layanan, dan total;
  * menu bermodifier diteruskan ke formulir kustomisasi UC-04 (ordering::item-customizer).
+ * Tombol Checkout membuka halaman UC-05 (ordering::checkout); pesanan dibuat di sana.
  */
 new class extends Component
 {
     public string $canteenSlug = '';
 
-    /** Idempotency stabil per muat komponen: klik ganda tak membuat order dobel. */
-    public string $idempotencyKey = '';
-
     public function mount(string $canteenSlug): void
     {
         $this->canteenSlug = $canteenSlug;
-        $this->idempotencyKey = (string) Str::uuid();
     }
 
     private function session(): ?CustomerSession
@@ -121,43 +114,6 @@ new class extends Component
         app(CartService::class)->remove($session, $lineKey);
         unset($this->cart);
     }
-
-    /**
-     * Checkout atomik: buat order dari keranjang, pasang cookie pelacakan (opaque),
-     * lalu arahkan ke halaman status. Idempoten via idempotencyKey.
-     */
-    public function checkout()
-    {
-        $session = $this->session();
-        if ($session === null) {
-            return null;
-        }
-
-        try {
-            $result = app(CheckoutService::class)->checkout($session, $this->idempotencyKey);
-        } catch (CheckoutException $e) {
-            unset($this->cart);
-            $this->addError('cart', $e->getMessage());
-
-            return null;
-        }
-
-        if ($result->trackingToken !== null) {
-            Cookie::queue(cookie(
-                name: 'order_tracking',
-                value: $result->trackingToken,
-                minutes: 240,
-                path: '/',
-                domain: null,
-                secure: request()->isSecure() || app()->isProduction(),
-                httpOnly: true,
-                raw: false,
-                sameSite: 'lax',
-            ));
-        }
-
-        return $this->redirectRoute('customer.order.show', ['canteen' => $this->canteenSlug], navigate: false);
-    }
 };
 ?>
 
@@ -169,6 +125,10 @@ new class extends Component
             @if ($this->cart && $this->cart->totalQuantity > 0) {{ $this->cart->totalQuantity }} item @endif
         </span>
     </div>
+
+    @if (session('checkout_error'))
+        <div class="m-4 rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" role="alert" data-test="checkout-error">{{ session('checkout_error') }}</div>
+    @endif
 
     @error('cart')
         <div class="m-4 rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" role="alert">{{ $message }}</div>
@@ -231,12 +191,20 @@ new class extends Component
         @endif
     @endif
 
-    {{-- UC-03 alur 6a: keranjang kosong -> tombol checkout nonaktif. --}}
+    {{-- UC-03 alur 6a: keranjang kosong -> tombol checkout nonaktif. UC-05 langkah 1: buka checkout. --}}
     <div class="p-4">
-        <button type="button" wire:click="checkout" wire:loading.attr="disabled" @disabled(! $this->cart?->isOrderable()) data-test="checkout-button"
-            class="flex min-h-12 w-full items-center justify-between bg-red-600 px-4 font-bold text-white disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-600">
-            <span>Checkout</span>
-            <span>Rp{{ number_format($this->cart?->grandTotal() ?? 0, 0, ',', '.') }}</span>
-        </button>
+        @if ($this->cart?->isOrderable())
+            <a href="{{ route('customer.checkout', ['canteen' => $canteenSlug]) }}" wire:navigate data-test="checkout-button"
+                class="flex min-h-12 w-full items-center justify-between bg-red-600 px-4 font-bold text-white">
+                <span>Checkout</span>
+                <span>Rp{{ number_format($this->cart->grandTotal(), 0, ',', '.') }}</span>
+            </a>
+        @else
+            <button type="button" disabled data-test="checkout-button"
+                class="flex min-h-12 w-full cursor-not-allowed items-center justify-between bg-zinc-300 px-4 font-bold text-zinc-600">
+                <span>Checkout</span>
+                <span>Rp{{ number_format($this->cart?->grandTotal() ?? 0, 0, ',', '.') }}</span>
+            </button>
+        @endif
     </div>
 </div>

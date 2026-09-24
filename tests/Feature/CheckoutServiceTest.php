@@ -247,6 +247,7 @@ class CheckoutServiceTest extends TestCase
     {
         $canteen = Canteen::factory()->create();
         $tenant = $this->tenantWithCommission($canteen);
+        $tenant->forceFill(['pre_order_enabled' => true])->save();
         $menu = Menu::factory()->create(['tenant_id' => $tenant->id, 'stock_qty' => 5]);
         $session = $this->sessionFor($canteen);
         $this->cart()->add($session, $menu->id, 1);

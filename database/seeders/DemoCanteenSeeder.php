@@ -65,6 +65,7 @@ class DemoCanteenSeeder extends Seeder
                     'slug' => strtolower($code).'-pusat',
                     'display_name' => $spec['display'],
                     'status' => 'active',
+                    'pre_order_enabled' => true, // UC-06: demo pre-order aktif
                     'deleted_at' => null,
                 ]);
             $tenant->save();

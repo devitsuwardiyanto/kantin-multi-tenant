@@ -25,6 +25,16 @@ final class CheckoutException extends RuntimeException
         return new self('Stok berubah saat checkout. Perbarui keranjang lalu coba lagi.');
     }
 
+    public static function tenantClosed(string $tenantName): self
+    {
+        return new self("{$tenantName} sedang tutup. Hapus itemnya atau pilih Pesan dulu / Pick-up.");
+    }
+
+    public static function pickupNeedsSchedule(): self
+    {
+        return new self('Pilih waktu pengambilan untuk Pesan dulu / Pick-up.');
+    }
+
     public static function commissionNotConfigured(): self
     {
         return new self('Konfigurasi komisi tenant belum tersedia.');

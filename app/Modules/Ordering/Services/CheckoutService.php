@@ -9,13 +9,18 @@ use App\Models\Menu;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemModifier;
+use App\Models\Tenant;
 use App\Models\TenantOrder;
 use App\Modules\Admin\Services\AuditLogger;
+use App\Modules\Catalog\Services\TenantOpeningHours;
 use App\Modules\Ordering\Data\CartLine;
+use App\Modules\Ordering\Data\CheckoutDetails;
 use App\Modules\Ordering\Data\CheckoutResult;
 use App\Modules\Ordering\Exceptions\CheckoutException;
+use App\Modules\Ordering\Exceptions\PreOrderException;
 use App\Support\Tokens\OpaqueToken;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -33,18 +38,24 @@ use Illuminate\Support\Str;
  *    dobel potong stok / dobel order).
  *  - Stok dipotong ATOMIK berpenjaga (WHERE stock_qty >= qty); kalah balapan → rollback.
  *  - TenantContext TIDAK aktif pada checkout anonim; tenant_id di-set eksplisit per baris.
+ *  - UC-05: mode penyajian + identitas ringkas (nama, WhatsApp) ikut disimpan; makan di tempat
+ *    hanya bila semua tenant sedang buka. UC-06: pre-order divalidasi ulang di dalam transaksi
+ *    (baris tenant dikunci) lalu disimpan berstatus "scheduled" dengan release_at.
  */
 final class CheckoutService
 {
     public function __construct(
         private CartService $cart,
         private AuditLogger $audit,
+        private TenantOpeningHours $hours,
+        private PreOrderScheduler $preOrders,
     ) {}
 
     /**
      * @throws CheckoutException
+     * @throws PreOrderException
      */
-    public function checkout(CustomerSession $session, string $idempotencyKey, ?CarbonInterface $scheduledAt = null): CheckoutResult
+    public function checkout(CustomerSession $session, string $idempotencyKey, ?CarbonInterface $scheduledAt = null, ?CheckoutDetails $details = null): CheckoutResult
     {
         $existing = Order::query()->where('checkout_key', $idempotencyKey)->first();
         if ($existing !== null) {
@@ -71,10 +82,30 @@ final class CheckoutService
             $groups[$line->tenantId][] = $line;
         }
 
+        $scheduledAt = $scheduledAt !== null ? $this->preOrders->storage($scheduledAt) : null;
+        $serviceMode = $scheduledAt !== null ? CheckoutDetails::PICKUP : ($details->serviceMode ?? CheckoutDetails::DINE_IN);
+        if ($serviceMode === CheckoutDetails::PICKUP && $scheduledAt === null) {
+            throw CheckoutException::pickupNeedsSchedule();
+        }
+
+        // UC-05 prasyarat 2: pesanan langsung hanya bila seluruh tenant terkait sedang buka.
+        if ($scheduledAt === null) {
+            foreach ($this->tenants(array_keys($groups)) as $tenant) {
+                if (! $this->hours->isOpen($tenant)) {
+                    throw CheckoutException::tenantClosed($tenant->display_name);
+                }
+            }
+        }
+
         $tracking = OpaqueToken::issue(32);
 
         try {
-            $order = DB::transaction(function () use ($session, $canteen, $groups, $idempotencyKey, $tracking, $taxRate, $feeRate, $scheduledAt): Order {
+            $order = DB::transaction(function () use ($session, $canteen, $groups, $idempotencyKey, $tracking, $taxRate, $feeRate, $scheduledAt, $serviceMode, $details): Order {
+                if ($scheduledAt !== null) {
+                    // Kunci baris tenant: hitung kapasitas slot tanpa balapan antarpelanggan.
+                    $this->preOrders->assertSchedulable($this->tenants(array_keys($groups), lock: true), $scheduledAt);
+                }
+
                 $order = new Order;
                 $order->forceFill([
                     'public_id' => (string) Str::uuid(),
@@ -84,11 +115,16 @@ final class CheckoutService
                     'checkout_key' => $idempotencyKey,
                     'tracking_token_hash' => $tracking['hash'],
                     'status' => 'awaiting_payment',
+                    'service_mode' => $serviceMode,
                     'subtotal_amount' => 0,
                     'tax_amount' => 0,
                     'service_fee_amount' => 0,
                     'grand_total_amount' => 0,
-                    'customer_snapshot' => ['session_id' => $session->id],
+                    'customer_snapshot' => array_filter([
+                        'session_id' => $session->id,
+                        'name' => $details?->customerName,
+                        'whatsapp' => $details?->whatsapp,
+                    ], fn ($value): bool => $value !== null && $value !== ''),
                     'table_snapshot' => $this->tableSnapshot($session),
                     'placed_at' => now(),
                 ])->save();
@@ -112,8 +148,11 @@ final class CheckoutService
                         'order_id' => $order->id,
                         'tenant_id' => $tenantId,
                         'commission_id' => $commission->id,
-                        'status' => 'pending',
+                        'status' => $scheduledAt !== null ? 'scheduled' : 'pending',
                         'scheduled_at' => $scheduledAt,
+                        'release_at' => $scheduledAt !== null
+                            ? $this->preOrders->releaseAt($scheduledAt, max(0, ...array_map(static fn (CartLine $l): int => $l->prepMinutes, $lines)))
+                            : null,
                         'commission_rate_snapshot' => $commission->commission_rate,
                         'subtotal_amount' => $tenantSubtotal,
                         'tax_amount' => $tenantTax,
@@ -201,6 +240,7 @@ final class CheckoutService
             'quantity' => $line->quantity,
             'modifier_total' => $line->modifierTotal,
             'line_total' => $line->lineTotal,
+            'note' => $line->note,
         ])->save();
 
         foreach ($line->modifiers as $modifier) {
@@ -236,6 +276,20 @@ final class CheckoutService
         }
 
         return $scheme;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return Collection<int, Tenant>
+     */
+    private function tenants(array $ids, bool $lock = false): Collection
+    {
+        return Tenant::query()
+            ->whereIn('id', $ids)
+            ->with(['operatingHours' => fn ($query) => $query->withoutGlobalScope('tenant')])
+            ->when($lock, fn ($query) => $query->lockForUpdate())
+            ->orderBy('id')
+            ->get();
     }
 
     /**
