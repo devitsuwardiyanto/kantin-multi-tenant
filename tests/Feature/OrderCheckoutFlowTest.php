@@ -70,7 +70,12 @@ class OrderCheckoutFlowTest extends TestCase
         $this->bindSession($session);
 
         Livewire::test('ordering::cart', ['canteenSlug' => $canteen->slug])
-            ->call('checkout')
+            ->assertSeeHtml('href="'.route('customer.checkout', ['canteen' => $canteen->slug]).'"');
+
+        Livewire::test('ordering::checkout', ['canteenSlug' => $canteen->slug])
+            ->set('customerName', 'Dewi Lestari')
+            ->set('whatsapp', '0812-3456-7890')
+            ->call('confirm')
             ->assertRedirect(route('customer.order.show', ['canteen' => $canteen->slug], false));
 
         $this->assertSame(1, Order::query()->count());

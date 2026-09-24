@@ -13,13 +13,18 @@
             @if (($order->table_snapshot['label'] ?? null))
                 <p class="mt-2 text-sm text-zinc-500">Meja: {{ $order->table_snapshot['label'] }} ({{ $order->table_snapshot['code'] ?? '' }})</p>
             @endif
+            <p class="mt-1 text-sm text-zinc-500" data-test="service-mode">Mode: {{ $order->service_mode === 'pickup' ? 'Pesan dulu / Pick-up' : 'Makan di tempat' }}@if ($order->customer_snapshot['name'] ?? null) · a.n. {{ $order->customer_snapshot['name'] }}@endif</p>
         </div>
 
         @foreach ($order->tenantOrders as $tenantOrder)
             <div wire:key="to-{{ $tenantOrder->id }}" class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
                 <div class="mb-2 flex items-center justify-between">
                     <h2 class="font-semibold">{{ $tenantOrder->tenant->display_name }}</h2>
-                    <x-status-badge :status="'pending'">{{ $tenantOrder->status }}</x-status-badge>
+                    @if ($tenantOrder->status === 'scheduled')
+                        <x-status-badge :status="'pending'">terjadwal · ambil {{ $tenantOrder->scheduled_at?->setTimezone(config('app.display_timezone'))->format('H.i') }}</x-status-badge>
+                    @else
+                        <x-status-badge :status="'pending'">{{ $tenantOrder->status }}</x-status-badge>
+                    @endif
                 </div>
                 <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
                     @foreach ($tenantOrder->items as $item)

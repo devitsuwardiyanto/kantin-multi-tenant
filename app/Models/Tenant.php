@@ -18,6 +18,14 @@ class Tenant extends Model
     // canteen_id di-set eksplisit (bukan dari request pelanggan).
     protected $fillable = ['code', 'slug', 'display_name', 'status'];
 
+    protected function casts(): array
+    {
+        return [
+            'pre_order_enabled' => 'boolean',
+            'pre_order_slot_capacity' => 'integer',
+        ];
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

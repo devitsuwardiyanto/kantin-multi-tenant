@@ -23,6 +23,12 @@ class TenantFactory extends Factory
         ];
     }
 
+    /** UC-06: tenant menerima pre-order dengan kapasitas slot tertentu. */
+    public function preOrder(int $slotCapacity = 5): static
+    {
+        return $this->state(['pre_order_enabled' => true, 'pre_order_slot_capacity' => $slotCapacity]);
+    }
+
     public function suspended(): static
     {
         return $this->state(['status' => 'suspended']);
