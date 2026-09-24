@@ -19,6 +19,11 @@ final class PaymentException extends RuntimeException
         return new self('Tagihan QRIS telah kedaluwarsa. Buat tagihan baru.');
     }
 
+    public static function gatewayUnavailable(): self
+    {
+        return new self('Pembayaran sedang mengalami gangguan. Silakan coba beberapa saat lagi.');
+    }
+
     public static function sandboxOnly(): self
     {
         return new self('Simulasi pembayaran hanya tersedia pada mode sandbox.');

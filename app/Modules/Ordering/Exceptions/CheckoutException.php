@@ -35,6 +35,11 @@ final class CheckoutException extends RuntimeException
         return new self('Pilih waktu pengambilan untuk Pesan dulu / Pick-up.');
     }
 
+    public static function notCancellable(): self
+    {
+        return new self('Pesanan sudah dibayar atau dibatalkan sehingga tidak dapat dibatalkan.');
+    }
+
     public static function commissionNotConfigured(): self
     {
         return new self('Konfigurasi komisi tenant belum tersedia.');

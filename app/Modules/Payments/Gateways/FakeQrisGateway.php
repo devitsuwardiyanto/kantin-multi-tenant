@@ -5,7 +5,9 @@ namespace App\Modules\Payments\Gateways;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Data\PaymentChargeRequest;
 use App\Modules\Payments\Data\QrisCharge;
+use App\Modules\Payments\Exceptions\GatewayUnavailableException;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * Gateway QRIS TIRUAN untuk sandbox/pengembangan. Menghasilkan payload EMVCo QRIS dinamis
@@ -16,8 +18,22 @@ use Illuminate\Support\Str;
  */
 final class FakeQrisGateway implements PaymentGateway
 {
+    /**
+     * @param  bool  $unavailable  menirukan provider yang tidak merespons (UC-07 alur 1a)
+     */
+    public function __construct(private bool $unavailable = false) {}
+
     public function createQrisCharge(PaymentChargeRequest $request): QrisCharge
     {
+        if ($this->unavailable) {
+            throw new GatewayUnavailableException('Gateway QRIS sandbox tidak merespons.');
+        }
+
+        // Provider nyata menolak rincian split yang tidak sama dengan nominal tagihan.
+        if ($request->splits !== [] && array_sum(array_column($request->splits, 'gross')) !== $request->amount) {
+            throw new InvalidArgumentException('Jumlah split tidak sama dengan nominal tagihan.');
+        }
+
         $providerReference = 'FAKE-QRIS-'.strtoupper(Str::random(20));
         $payload = $this->buildEmvcoPayload($request->amount, $request->reference);
 
