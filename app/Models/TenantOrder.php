@@ -15,6 +15,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $status
  * @property CarbonImmutable|null $scheduled_at
  * @property CarbonImmutable|null $release_at
+ * @property int $subtotal_amount
+ * @property int $tax_amount
+ * @property int $service_fee_amount
+ * @property int $commission_amount
+ * @property int $net_amount
  */
 class TenantOrder extends Model
 {

@@ -2,6 +2,8 @@
     @php($rupiah = fn (int $n) => 'Rp '.number_format($n, 0, ',', '.'))
 
     <div class="mx-auto max-w-2xl space-y-6">
+        {{-- UC-07: layar pembayaran QRIS tampil paling atas selama pesanan menunggu pembayaran. --}}
+        <livewire:payments::order-payment :canteen-slug="request()->route('canteen')" />
         <div class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
             <div class="flex items-center justify-between gap-3">
                 <div>
@@ -51,7 +53,5 @@
                 <div class="mt-2 flex justify-between border-t border-zinc-200 pt-2 text-base font-bold dark:border-zinc-800"><dt>Total</dt><dd>{{ $rupiah($order->grand_total_amount) }}</dd></div>
             </dl>
         </div>
-
-        <livewire:payments::order-payment :canteen-slug="request()->route('canteen')" />
     </div>
 </x-layouts.customer>

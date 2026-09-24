@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Gateway QRIS (UC-07). Masa berlaku QRIS maksimal 15 menit; NMID merchant ditampilkan
+    // tersamar di layar pembayaran. fake_unavailable menirukan gateway yang tidak merespons.
+    'qris' => [
+        'expiry_seconds' => (int) env('QRIS_EXPIRY_SECONDS', 900),
+        'merchant_nmid' => env('QRIS_MERCHANT_NMID', 'ID1020008821'),
+        'fake_unavailable' => (bool) env('QRIS_FAKE_UNAVAILABLE', false),
+    ],
+
 ];
