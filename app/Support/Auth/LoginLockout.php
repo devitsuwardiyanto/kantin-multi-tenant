@@ -3,7 +3,6 @@
 namespace App\Support\Auth;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 /**
@@ -21,7 +20,7 @@ final class LoginLockout
 
     public function isLocked(string $email): bool
     {
-        return Cache::has($this->lockKey($email));
+        return $this->lockedUntil($email) > now()->getTimestamp();
     }
 
     /**
@@ -29,33 +28,47 @@ final class LoginLockout
      */
     public function minutesRemaining(string $email): int
     {
-        $until = (int) Cache::get($this->lockKey($email), 0);
-
-        return max(1, (int) ceil(($until - now()->getTimestamp()) / 60));
+        return max(1, (int) ceil(($this->lockedUntil($email) - now()->getTimestamp()) / 60));
     }
 
     /**
      * Catat satu kegagalan; kembalikan true bila kegagalan ini memicu penguncian.
+     * Jendela dan masa kunci dihitung dari timestamp tersimpan (bukan TTL cache), sehingga
+     * perilakunya sama pada store array maupun Redis. TTL hanya untuk membersihkan kunci lama.
      */
     public function recordFailure(string $email): bool
     {
-        $counterKey = $this->counterKey($email);
-        RateLimiter::hit($counterKey, self::FAILURE_WINDOW_SECONDS);
+        $now = now()->getTimestamp();
+        /** @var array{count: int, started_at: int}|null $window */
+        $window = Cache::get($this->counterKey($email));
 
-        if (RateLimiter::attempts($counterKey) < self::MAX_FAILURES) {
+        if ($window === null || $now - $window['started_at'] >= self::FAILURE_WINDOW_SECONDS) {
+            $window = ['count' => 0, 'started_at' => $now];
+        }
+
+        $window['count']++;
+
+        if ($window['count'] < self::MAX_FAILURES) {
+            Cache::put($this->counterKey($email), $window, self::FAILURE_WINDOW_SECONDS);
+
             return false;
         }
 
-        Cache::put($this->lockKey($email), now()->addSeconds(self::LOCK_SECONDS)->getTimestamp(), self::LOCK_SECONDS);
-        RateLimiter::clear($counterKey);
+        Cache::put($this->lockKey($email), $now + self::LOCK_SECONDS, self::LOCK_SECONDS);
+        Cache::forget($this->counterKey($email));
 
         return true;
     }
 
     public function clear(string $email): void
     {
-        RateLimiter::clear($this->counterKey($email));
+        Cache::forget($this->counterKey($email));
         Cache::forget($this->lockKey($email));
+    }
+
+    private function lockedUntil(string $email): int
+    {
+        return (int) Cache::get($this->lockKey($email), 0);
     }
 
     private function counterKey(string $email): string
