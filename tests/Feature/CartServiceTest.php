@@ -188,6 +188,7 @@ class CartServiceTest extends TestCase
         $session = $this->sessionFor($canteen);
 
         $group = ModifierGroup::factory()->create(['tenant_id' => $tenant->id]);
+        $menu->modifierGroups()->attach($group->id, ['tenant_id' => $tenant->id, 'sort_order' => 1]);
         $option = ModifierOption::factory()->create([
             'tenant_id' => $tenant->id,
             'group_id' => $group->id,

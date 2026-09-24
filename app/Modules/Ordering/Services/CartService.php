@@ -2,8 +2,10 @@
 
 namespace App\Modules\Ordering\Services;
 
+use App\Models\Canteen;
 use App\Models\CustomerSession;
 use App\Models\Menu;
+use App\Models\ModifierGroup;
 use App\Models\ModifierOption;
 use App\Modules\Ordering\Data\CartLine;
 use App\Modules\Ordering\Data\CartView;
@@ -20,8 +22,10 @@ use Illuminate\Support\Facades\Redis;
  *  - Menu wajib milik tenant AKTIF dari canteen sesi. Injeksi menu lintas-canteen/tenant
  *    ditolak di add() (query ter-scope canteen).
  *  - Hanya key milik sesi yang disentuh (SETEX/DEL satu key). Tidak ada FLUSHDB / hapus global.
+ *  - UC-04: pilihan modifier divalidasi terhadap grup AKTIF yang terpasang pada menu (min/maks
+ *    per grup); catatan khusus disaring dari tag HTML dan dibatasi 200 karakter.
  *
- * @phpstan-type CartItem array{line_key: string, menu_id: int, tenant_id: int, quantity: int, modifier_option_ids: list<int>, price_at_add: int, name_at_add: string, tenant_name_at_add: string}
+ * @phpstan-type CartItem array{line_key: string, menu_id: int, tenant_id: int, quantity: int, modifier_option_ids: list<int>, note: ?string, price_at_add: int, name_at_add: string, tenant_name_at_add: string}
  */
 final class CartService
 {
@@ -33,13 +37,15 @@ final class CartService
 
     private const FALLBACK_TTL_SECONDS = 14400; // 4 jam, selaras masa hidup sesi pelanggan
 
+    public const NOTE_MAX_LENGTH = 200;
+
     /**
-     * Menambah menu (opsional dengan modifier) ke keranjang. Menggabungkan baris dengan
-     * konfigurasi identik. Menolak menu/modifier yang tidak sah untuk kantin sesi ini.
+     * Menambah menu (opsional dengan modifier dan catatan) ke keranjang. Menggabungkan baris
+     * dengan konfigurasi identik. Menolak menu/modifier yang tidak sah untuk kantin sesi ini.
      *
      * @param  list<int>  $modifierOptionIds
      */
-    public function add(CustomerSession $session, int $menuId, int $quantity = 1, array $modifierOptionIds = []): void
+    public function add(CustomerSession $session, int $menuId, int $quantity = 1, array $modifierOptionIds = [], ?string $note = null): void
     {
         if ($quantity < 1) {
             throw CartException::invalidQuantity();
@@ -47,13 +53,17 @@ final class CartService
 
         $menu = $this->orderableMenu($session, $menuId);
         if ($menu === null) {
-            throw CartException::menuNotOrderable();
+            throw $this->menuExistsInCanteen($session, $menuId)
+                ? CartException::soldOut()
+                : CartException::menuNotOrderable();
         }
 
         $modifierIds = $this->normalizeModifierIds($modifierOptionIds);
         $options = $this->validModifierOptions($menu, $modifierIds);
+        $this->assertSelectionRules($menu, $options);
+        $note = $this->sanitizeNote($note);
 
-        $lineKey = $this->lineKey($menuId, $modifierIds);
+        $lineKey = $this->lineKey($menuId, $modifierIds, $note);
         $items = $this->load($session);
 
         $existingQty = isset($items[$lineKey]) ? (int) $items[$lineKey]['quantity'] : 0;
@@ -71,12 +81,37 @@ final class CartService
             'tenant_id' => $menu->tenant_id,
             'quantity' => $newQty,
             'modifier_option_ids' => $modifierIds,
+            'note' => $note,
             'price_at_add' => (int) $menu->base_price + (int) $modifierTotal,
             'name_at_add' => (string) $menu->name,
             'tenant_name_at_add' => (string) $menu->tenant->display_name,
         ];
 
         $this->persist($session, $items);
+    }
+
+    /**
+     * UC-04 langkah 1: grup modifier AKTIF yang terpasang pada menu yang dapat dipesan sesi ini,
+     * lengkap dengan opsinya (opsi habis tetap disertakan agar tampil nonaktif — alur 2a).
+     * Koleksi kosong berarti menu dapat langsung ditambahkan tanpa formulir kustomisasi.
+     *
+     * @return Collection<int, ModifierGroup>
+     */
+    public function modifierGroupsFor(CustomerSession $session, int $menuId): Collection
+    {
+        $menu = $this->orderableMenu($session, $menuId);
+
+        /** @var Collection<int, ModifierGroup> $groups */
+        $groups = $menu === null
+            ? ModifierGroup::query()->whereRaw('1 = 0')->get()
+            : $menu->modifierGroups()
+                ->withoutGlobalScope('tenant')
+                ->where('modifier_groups.tenant_id', $menu->tenant_id)
+                ->where('modifier_groups.is_active', true)
+                ->with(['options' => fn ($query) => $query->withoutGlobalScope('tenant')->orderBy('price_delta')->orderBy('id')])
+                ->get();
+
+        return $groups;
     }
 
     /**
@@ -125,6 +160,8 @@ final class CartService
             return new CartView([], 0, 0, false);
         }
 
+        $canteen = Canteen::query()->find($session->canteen_id);
+
         $menus = Menu::query()
             ->withoutGlobalScope('tenant')
             ->with('tenant:id,display_name,status,canteen_id')
@@ -149,7 +186,39 @@ final class CartService
             }
         }
 
-        return new CartView($lines, $subtotal, $totalQuantity, $blocking);
+        [$taxAmount, $serviceFeeAmount] = $this->chargesFor($lines, $canteen);
+
+        return new CartView($lines, $subtotal, $totalQuantity, $blocking, $taxAmount, $serviceFeeAmount);
+    }
+
+    /**
+     * Pajak dan biaya layanan dihitung PER TENANT dari tarif kantin lalu dijumlahkan — rumus
+     * yang sama dengan checkout, sehingga total di keranjang = total pesanan.
+     *
+     * @param  list<CartLine>  $lines
+     * @return array{0: int, 1: int}
+     */
+    private function chargesFor(array $lines, ?Canteen $canteen): array
+    {
+        if ($canteen === null) {
+            return [0, 0];
+        }
+
+        $subtotals = [];
+        foreach ($lines as $line) {
+            if ($line->available) {
+                $subtotals[$line->tenantId] = ($subtotals[$line->tenantId] ?? 0) + $line->lineTotal;
+            }
+        }
+
+        $tax = 0;
+        $fee = 0;
+        foreach ($subtotals as $tenantSubtotal) {
+            $tax += (int) round($tenantSubtotal * (float) $canteen->tax_rate);
+            $fee += (int) round($tenantSubtotal * (float) $canteen->service_fee_rate);
+        }
+
+        return [$tax, $fee];
     }
 
     /**
@@ -221,6 +290,7 @@ final class CartService
             lineTotal: $lineTotal,
             available: $available,
             issues: $issues,
+            note: isset($item['note']) && is_string($item['note']) ? $item['note'] : null,
         );
     }
 
@@ -240,6 +310,71 @@ final class CartService
                 $query->where('canteen_id', $session->canteen_id)->where('status', 'active');
             })
             ->first();
+    }
+
+    /**
+     * Membedakan menu habis (SRS UC-03 alur 2a) dari menu yang memang bukan milik kantin sesi.
+     */
+    private function menuExistsInCanteen(CustomerSession $session, int $menuId): bool
+    {
+        return Menu::query()
+            ->withoutGlobalScope('tenant')
+            ->where('id', $menuId)
+            ->whereHas('tenant', function ($query) use ($session): void {
+                $query->where('canteen_id', $session->canteen_id)->where('status', 'active');
+            })
+            ->exists();
+    }
+
+    /**
+     * UC-04 langkah 3: setiap opsi terpilih harus berasal dari grup aktif yang terpasang pada
+     * menu, dan jumlah pilihan per grup berada di antara min_select dan max_select (alur 3a).
+     *
+     * @param  Collection<int, ModifierOption>  $options
+     */
+    private function assertSelectionRules(Menu $menu, Collection $options): void
+    {
+        $groups = $menu->modifierGroups()
+            ->withoutGlobalScope('tenant')
+            ->where('modifier_groups.tenant_id', $menu->tenant_id)
+            ->where('modifier_groups.is_active', true)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($options as $option) {
+            if (! $groups->has($option->group_id)) {
+                throw CartException::modifierNotOrderable();
+            }
+        }
+
+        $counts = $options->countBy('group_id');
+        foreach ($groups as $group) {
+            $count = (int) $counts->get($group->id, 0);
+            if ($count < $group->min_select) {
+                throw CartException::modifierRequired($group->name, $group->min_select);
+            }
+            if ($count > $group->max_select) {
+                throw CartException::modifierTooMany($group->name, $group->max_select);
+            }
+        }
+    }
+
+    /**
+     * Catatan khusus: tag HTML dibuang (defense-in-depth; Blade tetap meng-escape saat tampil),
+     * spasi dirapikan, maksimal 200 karakter. String kosong menjadi null.
+     */
+    private function sanitizeNote(?string $note): ?string
+    {
+        if ($note === null) {
+            return null;
+        }
+
+        $clean = trim((string) preg_replace('/\s+/u', ' ', strip_tags($note)));
+        if (mb_strlen($clean) > self::NOTE_MAX_LENGTH) {
+            throw CartException::noteTooLong(self::NOTE_MAX_LENGTH);
+        }
+
+        return $clean === '' ? null : $clean;
     }
 
     /**
@@ -275,9 +410,9 @@ final class CartService
     /**
      * @param  list<int>  $modifierIds
      */
-    private function lineKey(int $menuId, array $modifierIds): string
+    private function lineKey(int $menuId, array $modifierIds, ?string $note = null): string
     {
-        return substr(hash('sha256', $menuId.'|'.implode(',', $modifierIds)), 0, 24);
+        return substr(hash('sha256', $menuId.'|'.implode(',', $modifierIds).'|'.($note ?? '')), 0, 24);
     }
 
     /**

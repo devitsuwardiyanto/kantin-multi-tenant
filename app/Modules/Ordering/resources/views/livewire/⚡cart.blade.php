@@ -13,6 +13,8 @@ use Livewire\Component;
  * Keranjang pelanggan. Sesi diambil dari cookie tepercaya (ResolveCustomerSession), BUKAN
  * dari prop klien. Semua harga di tampilan berasal dari CartService::view() yang selalu
  * merevalidasi harga/stok dari basis data. Tanpa sesi aktif, keranjang tidak bisa diisi.
+ * UC-03: item dikelompokkan per tenant dengan subtotal, pajak, biaya layanan, dan total;
+ * menu bermodifier diteruskan ke formulir kustomisasi UC-04 (ordering::item-customizer).
  */
 new class extends Component
 {
@@ -44,12 +46,33 @@ new class extends Component
             return;
         }
 
+        // UC-04 extension point "pemilihan item bermodifier".
+        if (app(CartService::class)->modifierGroupsFor($session, $menuId)->isNotEmpty()) {
+            $this->dispatch('customize-item', menuId: $menuId);
+
+            return;
+        }
+
         try {
             app(CartService::class)->add($session, $menuId, 1);
+            $this->resetErrorBag('cart');
             unset($this->cart);
         } catch (CartException $e) {
             $this->addError('cart', $e->getMessage());
         }
+    }
+
+    #[On('cart-updated')]
+    public function refreshCart(): void
+    {
+        $this->resetErrorBag('cart');
+        unset($this->cart);
+    }
+
+    #[Computed]
+    public function tableLabel(): ?string
+    {
+        return $this->session()?->diningTable?->label;
     }
 
     public function increment(string $lineKey): void
@@ -93,69 +116,82 @@ new class extends Component
 };
 ?>
 
-<div class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800" aria-label="Keranjang">
-    <h2 class="mb-3 flex items-center justify-between font-semibold">
-        <span>Keranjang</span>
-        @if ($this->cart && $this->cart->totalQuantity > 0)
-            <span class="rounded-full bg-zinc-900 px-2 py-0.5 text-xs text-white dark:bg-white dark:text-zinc-900">{{ $this->cart->totalQuantity }}</span>
-        @endif
-    </h2>
+<div class="rounded-2xl border border-zinc-200 dark:border-zinc-800" aria-label="Keranjang">
+    <div class="flex flex-wrap items-baseline justify-between gap-x-3 border-b-2 border-zinc-900 p-4 dark:border-zinc-100">
+        <h2 class="text-xl font-extrabold">Keranjang</h2>
+        <span class="whitespace-nowrap text-xs font-semibold text-zinc-500">
+            @if ($this->tableLabel) {{ $this->tableLabel }} · @endif
+            @if ($this->cart && $this->cart->totalQuantity > 0) {{ $this->cart->totalQuantity }} item @endif
+        </span>
+    </div>
 
     @error('cart')
-        <div class="mb-3 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800 dark:bg-red-900/40 dark:text-red-300">{{ $message }}</div>
+        <div class="m-4 rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" role="alert">{{ $message }}</div>
     @enderror
 
     @if (! $this->cart)
-        <x-empty-state title="Belum ada sesi" description="Pindai QR di meja untuk mulai memesan." />
+        <div class="p-4"><x-empty-state title="Belum ada sesi" description="Pindai QR di meja untuk mulai memesan." /></div>
     @elseif ($this->cart->isEmpty())
-        <x-empty-state title="Keranjang kosong" description="Tambahkan menu dari katalog." />
+        <div class="p-4"><x-empty-state title="Keranjang kosong" description="Tambahkan menu dari katalog." /></div>
     @else
-        <ul class="space-y-3">
-            @foreach ($this->cart->lines as $line)
-                <li wire:key="line-{{ $line->lineKey }}" class="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800 {{ $line->available ? '' : 'opacity-70' }}">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="truncate font-medium">{{ $line->name }}</p>
-                            <p class="truncate text-xs text-zinc-500">{{ $line->tenantName }}</p>
-                            @foreach ($line->modifiers as $modifier)
-                                <p class="truncate text-xs text-zinc-500">+ {{ $modifier['name'] }}</p>
-                            @endforeach
-                        </div>
-                        <p class="shrink-0 font-semibold">Rp {{ number_format($line->lineTotal, 0, ',', '.') }}</p>
-                    </div>
+        @foreach ($this->cart->tenantGroups() as $group)
+            <section wire:key="tenant-{{ $group['tenant_id'] }}" data-test="cart-tenant">
+                <div class="flex items-baseline justify-between bg-zinc-100 px-4 py-2 dark:bg-zinc-800">
+                    <h3 class="text-sm font-extrabold uppercase tracking-wide">{{ $group['tenant_name'] }}</h3>
+                    <span class="text-xs font-semibold text-zinc-500">Subtotal Rp{{ number_format($group['subtotal'], 0, ',', '.') }}</span>
+                </div>
+                <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    @foreach ($group['lines'] as $line)
+                        <li wire:key="line-{{ $line->lineKey }}" @class(['flex items-center gap-3 px-4 py-3', 'opacity-70' => ! $line->available])>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-semibold">{{ $line->name }}</p>
+                                @if ($line->modifiers !== [] || $line->note)
+                                    <p class="text-xs text-zinc-500">
+                                        {{ collect($line->modifiers)->map(fn ($m) => '+ '.$m['name'])->implode(' · ') }}
+                                        @if ($line->note) {{ $line->modifiers !== [] ? '·' : '' }} "{{ $line->note }}" @endif
+                                    </p>
+                                @endif
+                                <p class="text-sm font-semibold">Rp{{ number_format($line->unitPrice + $line->modifierTotal, 0, ',', '.') }}{{ $line->quantity > 1 ? ' × '.$line->quantity : '' }}</p>
+                                @if (! $line->available)
+                                    <p class="mt-1 text-xs font-medium text-red-600">
+                                        @if (in_array('menu_unavailable', $line->issues, true)) Menu telah habis. @endif
+                                        @if (in_array('insufficient_stock', $line->issues, true)) Stok tidak mencukupi. @endif
+                                        @if (in_array('modifier_unavailable', $line->issues, true)) Pilihan tambahan tidak tersedia. @endif
+                                    </p>
+                                @elseif ($line->priceChanged())
+                                    <p class="mt-1 text-xs font-medium text-amber-600">Harga diperbarui menjadi Rp{{ number_format($line->unitPrice + $line->modifierTotal, 0, ',', '.') }}.</p>
+                                @endif
+                                <button type="button" wire:click="remove('{{ $line->lineKey }}')" class="text-xs text-red-600 underline">Hapus</button>
+                            </div>
+                            <div class="flex shrink-0 border-2 border-zinc-900 dark:border-zinc-100">
+                                <button type="button" wire:click="decrement('{{ $line->lineKey }}')" class="min-h-10 min-w-10 font-bold" aria-label="Kurangi">−</button>
+                                <span class="flex min-w-10 items-center justify-center border-x-2 border-zinc-900 font-bold dark:border-zinc-100">{{ $line->quantity }}</span>
+                                <button type="button" wire:click="increment('{{ $line->lineKey }}')" class="min-h-10 min-w-10 font-bold" aria-label="Tambah">+</button>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endforeach
 
-                    @if (! $line->available)
-                        <p class="mt-1 text-xs font-medium text-red-600">
-                            @if (in_array('menu_unavailable', $line->issues, true)) Menu tidak lagi tersedia. @endif
-                            @if (in_array('insufficient_stock', $line->issues, true)) Stok tidak mencukupi. @endif
-                            @if (in_array('modifier_unavailable', $line->issues, true)) Pilihan tambahan tidak tersedia. @endif
-                        </p>
-                    @elseif ($line->priceChanged())
-                        <p class="mt-1 text-xs font-medium text-amber-600">Harga diperbarui menjadi Rp {{ number_format($line->unitPrice + $line->modifierTotal, 0, ',', '.') }}.</p>
-                    @endif
-
-                    <div class="mt-2 flex items-center gap-2">
-                        <button type="button" wire:click="decrement('{{ $line->lineKey }}')" class="min-h-9 min-w-9 rounded-lg border border-zinc-300 dark:border-zinc-600" aria-label="Kurangi">−</button>
-                        <span class="w-8 text-center text-sm font-medium">{{ $line->quantity }}</span>
-                        <button type="button" wire:click="increment('{{ $line->lineKey }}')" class="min-h-9 min-w-9 rounded-lg border border-zinc-300 dark:border-zinc-600" aria-label="Tambah">+</button>
-                        <button type="button" wire:click="remove('{{ $line->lineKey }}')" class="ms-auto text-sm text-red-600 underline">Hapus</button>
-                    </div>
-                </li>
-            @endforeach
-        </ul>
-
-        <div class="mt-4 flex items-center justify-between border-t border-zinc-200 pt-3 dark:border-zinc-800">
-            <span class="text-sm text-zinc-500">Subtotal</span>
-            <span class="text-lg font-bold">Rp {{ number_format($this->cart->subtotal, 0, ',', '.') }}</span>
-        </div>
+        <dl class="m-4 divide-y divide-zinc-200 border-2 border-zinc-900 text-sm dark:divide-zinc-700 dark:border-zinc-100" data-test="cart-summary">
+            <div class="flex justify-between px-3 py-2"><dt>Subtotal ({{ count($this->cart->tenantGroups()) }} tenant)</dt><dd class="font-semibold">Rp{{ number_format($this->cart->subtotal, 0, ',', '.') }}</dd></div>
+            <div class="flex justify-between px-3 py-2"><dt>Pajak</dt><dd class="font-semibold">Rp{{ number_format($this->cart->taxAmount, 0, ',', '.') }}</dd></div>
+            <div class="flex justify-between px-3 py-2"><dt>Biaya layanan</dt><dd class="font-semibold">Rp{{ number_format($this->cart->serviceFeeAmount, 0, ',', '.') }}</dd></div>
+            <div class="flex justify-between border-t-2 border-zinc-900 px-3 py-2 text-base font-extrabold dark:border-zinc-100"><dt>Total</dt><dd>Rp{{ number_format($this->cart->grandTotal(), 0, ',', '.') }}</dd></div>
+        </dl>
 
         @if ($this->cart->hasBlockingIssues)
-            <p class="mt-2 text-xs text-red-600">Perbaiki item bermasalah sebelum melanjutkan.</p>
+            <p class="mx-4 text-xs text-red-600">Perbaiki item bermasalah sebelum melanjutkan.</p>
         @endif
-
-        <button type="button" @disabled(! $this->cart->isOrderable())
-            class="mt-3 min-h-11 w-full rounded-xl bg-zinc-900 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900">
-            Lanjut ke Pembayaran
-        </button>
     @endif
+
+    {{-- UC-03 alur 6a: keranjang kosong -> tombol checkout nonaktif. --}}
+    <div class="p-4">
+        <button type="button" @disabled(! $this->cart?->isOrderable()) data-test="checkout-button"
+            class="flex min-h-12 w-full items-center justify-between bg-red-600 px-4 font-bold text-white disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-600">
+            <span>Checkout</span>
+            <span>Rp{{ number_format($this->cart?->grandTotal() ?? 0, 0, ',', '.') }}</span>
+        </button>
+    </div>
 </div>

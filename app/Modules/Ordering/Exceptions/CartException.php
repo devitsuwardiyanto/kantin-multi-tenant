@@ -29,4 +29,24 @@ final class CartException extends RuntimeException
     {
         return new self('Pilihan tambahan tidak tersedia.');
     }
+
+    public static function soldOut(): self
+    {
+        return new self('Menu telah habis.');
+    }
+
+    public static function modifierRequired(string $group, int $min): self
+    {
+        return new self("Pilih minimal {$min} opsi {$group}.");
+    }
+
+    public static function modifierTooMany(string $group, int $max): self
+    {
+        return new self("Pilih maksimal {$max} opsi {$group}.");
+    }
+
+    public static function noteTooLong(int $max): self
+    {
+        return new self("Catatan khusus maksimal {$max} karakter.");
+    }
 }

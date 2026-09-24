@@ -53,6 +53,8 @@ class DemoCanteenSeeder extends Seeder
                 'category' => 'Kopi Susu',
                 'menus' => [['Kopi Susu Gula Aren', 18000], ['Americano', 16000]],
                 'modifier' => ['Ukuran', [['Regular', 0], ['Large', 5000]]],
+                // UC-04: grup opsional (maks 2) dengan satu opsi habis agar alur 2a dapat dicoba.
+                'extra' => ['Topping', 0, 2, [['Extra shot espresso', 3000, true], ['Cream cheese foam', 4000, false]]],
             ],
         ];
 
@@ -88,15 +90,18 @@ class DemoCanteenSeeder extends Seeder
                 ->forceFill(['sort_order' => 1, 'is_active' => true]);
             $category->save();
 
+            $menus = [];
             foreach ($spec['menus'] as $i => [$name, $price]) {
-                tap(Menu::firstOrNew(['tenant_id' => $tenant->id, 'name' => $name]))
+                $menu = Menu::firstOrNew(['tenant_id' => $tenant->id, 'name' => $name])
                     ->forceFill([
                         'category_id' => $category->id,
                         'base_price' => $price,
                         'stock_qty' => 100,
                         'is_available' => true,
                         'prep_minutes' => 10 + $i,
-                    ])->save();
+                    ]);
+                $menu->save();
+                $menus[] = $menu;
             }
 
             [$groupName, $options] = $spec['modifier'];
@@ -107,6 +112,27 @@ class DemoCanteenSeeder extends Seeder
             foreach ($options as [$optName, $delta]) {
                 tap(ModifierOption::firstOrNew(['tenant_id' => $tenant->id, 'group_id' => $group->id, 'name' => $optName]))
                     ->forceFill(['price_delta' => $delta, 'stock_qty' => 100, 'is_available' => true])->save();
+            }
+            $groups = [$group];
+
+            if (isset($spec['extra'])) {
+                [$extraName, $min, $max, $extraOptions] = $spec['extra'];
+                $extra = tap(ModifierGroup::firstOrNew(['tenant_id' => $tenant->id, 'name' => $extraName]))
+                    ->forceFill(['min_select' => $min, 'max_select' => $max, 'is_active' => true]);
+                $extra->save();
+                foreach ($extraOptions as [$optName, $delta, $available]) {
+                    tap(ModifierOption::firstOrNew(['tenant_id' => $tenant->id, 'group_id' => $extra->id, 'name' => $optName]))
+                        ->forceFill(['price_delta' => $delta, 'stock_qty' => 100, 'is_available' => $available])->save();
+                }
+                $groups[] = $extra;
+            }
+
+            // UC-04: grup modifier dipasang pada menu pertama tenant; menu kedua tanpa modifier
+            // sehingga alur tambah langsung (UC-03) dan formulir kustomisasi (UC-04) sama-sama dapat dicoba.
+            foreach ($groups as $order => $modifierGroup) {
+                $menus[0]->modifierGroups()->syncWithoutDetaching([
+                    $modifierGroup->id => ['tenant_id' => $tenant->id, 'sort_order' => $order + 1],
+                ]);
             }
         }
 

@@ -29,6 +29,7 @@ final readonly class CartLine
         public int $lineTotal,
         public bool $available,
         public array $issues,
+        public ?string $note = null,
     ) {}
 
     public function priceChanged(): bool
