@@ -50,6 +50,7 @@ class AdminManagementTest extends TestCase
 
         $this->post(route('admin.tenants.store'), [
             'display_name' => 'Bakso Enak', 'code' => 'BAKSO', 'slug' => 'bakso', 'commission_rate' => '15',
+            'pic_name' => 'Yono', 'pic_email' => 'yono@kantin.test', 'bank_code' => 'BRI', 'account_holder' => 'Yono', 'account_number' => '1234563310',
         ])->assertRedirect();
 
         $tenant = Tenant::where('code', 'BAKSO')->firstOrFail();
@@ -58,7 +59,7 @@ class AdminManagementTest extends TestCase
 
         // Halaman create & edit admin benar-benar merender.
         $this->get(route('admin.tenants.create'))->assertOk();
-        $this->get(route('admin.tenants.edit', $tenant))->assertOk()->assertSee('Skema Komisi');
+        $this->get(route('admin.tenants.edit', $tenant))->assertOk()->assertSee('Ubah komisi');
     }
 
     public function test_tenant_code_is_unique_per_canteen(): void
@@ -151,6 +152,7 @@ class AdminManagementTest extends TestCase
 
         $this->post(route('admin.tenants.store'), [
             'display_name' => 'Y', 'code' => 'YY', 'slug' => 'yy', 'commission_rate' => '12',
+            'pic_name' => 'Y', 'pic_email' => 'y@kantin.test', 'bank_code' => 'BNI', 'account_holder' => 'Y', 'account_number' => '1234564485',
         ])->assertRedirect();
 
         $this->assertTrue(AuditLog::where('entity', 'tenant')->where('action', 'created')->exists());
