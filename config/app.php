@@ -67,6 +67,10 @@ return [
 
     'timezone' => 'UTC',
 
+    // Zona waktu presentasi (ADR-0003): data disimpan UTC; tampilan dan jam operasional
+    // tenant dibaca dalam zona waktu lokal kantin.
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Asia/Jakarta'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

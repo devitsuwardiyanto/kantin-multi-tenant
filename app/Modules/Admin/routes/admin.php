@@ -34,4 +34,5 @@ PortalRoutes::admin(function (): void {
     Route::post('/tables', [AdminDiningTableController::class, 'store'])->name('tables.store');
     Route::post('/tables/{table}/rotate', [AdminDiningTableController::class, 'rotate'])->name('tables.rotate');
     Route::get('/tables/{table}/qr', [AdminDiningTableController::class, 'qr'])->name('tables.qr');
+    Route::post('/tables/{table}/status', [AdminDiningTableController::class, 'status'])->name('tables.status');
 });

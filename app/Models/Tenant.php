@@ -35,6 +35,12 @@ class Tenant extends Model
         return $this->hasOne(TenantBalance::class);
     }
 
+    /** @return HasMany<TenantOperatingHour, $this> */
+    public function operatingHours(): HasMany
+    {
+        return $this->hasMany(TenantOperatingHour::class);
+    }
+
     /** @return HasMany<Menu, $this> */
     public function menus(): HasMany
     {
