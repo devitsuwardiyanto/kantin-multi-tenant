@@ -4,4 +4,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 
 | Applies to | Rule file |
 | --- | --- |
-| Modul_Praktikum_*.docx | .ai/rules/general.md |
+| Modul_Praktikum_*.docx, modul_praktikum/** | .ai/rules/general.md |
