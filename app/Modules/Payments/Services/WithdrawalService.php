@@ -2,29 +2,42 @@
 
 namespace App\Modules\Payments\Services;
 
-use App\Models\TenantBalance;
 use App\Models\TenantBankAccount;
 use App\Models\User;
+use App\Models\UserCanteenRole;
 use App\Models\Withdrawal;
 use App\Modules\Admin\Services\AuditLogger;
 use App\Modules\Payments\Exceptions\WithdrawalException;
+use App\Modules\Payments\Notifications\WithdrawalRequested;
+use App\Modules\Payments\Notifications\WithdrawalReviewed;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
  * Penarikan dana tenant berbasis ledger APPEND-ONLY.
  *
- *  - request(): tahan dana (available → held) via ledger 'hold' + buat withdrawal. SATU penarikan
- *    aktif per tenant ditegakkan kolom UNIQUE active_tenant_lock (diisi saat aktif, null saat final).
- *  - approve(): cairkan (held keluar) via ledger 'withdrawal_debit'.
- *  - reject(): lepas tahanan (held → available) via ledger 'release'.
+ *  - request() (UC-20): dalam satu transaksi baris saldo DIKUNCI, lalu nominal divalidasi
+ *    terhadap saldo tersedia + minimum; tahan dana (available → held) via ledger 'hold'. SATU
+ *    penarikan aktif per tenant ditegakkan kolom UNIQUE active_tenant_lock.
+ *  - approve() (UC-23): baris withdrawal dikunci; idempoten (sudah dicairkan → tanpa efek);
+ *    ledger tidak sesuai → status investigation (tak dapat disetujui); wajib bukti transfer;
+ *    cairkan (held keluar) via ledger 'withdrawal_debit'.
+ *  - reject() (UC-23 alur 4a): wajib alasan; lepas tahanan (held → available) via ledger 'release'.
  *
- * Semua transisi atomik; saldo dimutasi bersamaan entri ledger; CHECK non-negatif menjaga saldo.
+ * Semua transisi tercatat di audit log; CHECK non-negatif menjaga saldo. Notifikasi dikirim
+ * setelah commit (pengelola saat diajukan, tenant saat diputuskan).
  */
 final class WithdrawalService
 {
     public function __construct(private AuditLogger $audit) {}
+
+    public static function minimum(): int
+    {
+        return (int) config('services.withdrawal.minimum', 100000);
+    }
 
     /**
      * @throws WithdrawalException
@@ -34,19 +47,31 @@ final class WithdrawalService
         if ($amount <= 0) {
             throw WithdrawalException::invalidAmount();
         }
+        if ($amount < self::minimum()) {
+            throw WithdrawalException::belowMinimum(self::minimum());
+        }
 
         $tenantId = (int) $account->tenant_id;
         if ($account->status !== 'verified') {
             throw WithdrawalException::accountNotUsable();
         }
 
-        $available = (int) (TenantBalance::query()->firstOrNew(['tenant_id' => $tenantId])->available_amount ?? 0);
-        if ($amount > $available) {
-            throw WithdrawalException::insufficientFunds();
-        }
-
         try {
             return DB::transaction(function () use ($account, $tenantId, $amount, $requester): Withdrawal {
+                $this->ensureBalanceRow($tenantId);
+                $balance = DB::table('tenant_balances')->where('tenant_id', $tenantId)->lockForUpdate()->first();
+
+                // Alur 2b: pengajuan sebelumnya masih berjalan (diperiksa setelah kunci saldo).
+                if (Withdrawal::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->whereIn('status', Withdrawal::ACTIVE_STATUSES)->exists()) {
+                    throw WithdrawalException::alreadyActive();
+                }
+
+                // Alur 2a: saldo divalidasi SETELAH baris dikunci (tidak ada balapan antarpermintaan).
+                $available = (int) ($balance->available_amount ?? 0);
+                if ($amount > $available) {
+                    throw WithdrawalException::insufficientFunds($available);
+                }
+
                 $withdrawal = new Withdrawal;
                 $withdrawal->forceFill([
                     'tenant_id' => $tenantId,
@@ -61,7 +86,10 @@ final class WithdrawalService
                 $this->ledger($tenantId, $withdrawal->id, 'hold', -$amount, $amount, 'hold');
                 $this->adjustBalance($tenantId, -$amount, $amount);
 
-                $this->audit->record('withdrawal', $withdrawal->id, 'requested', null, ['amount' => $amount], $tenantId);
+                $this->audit->record('withdrawal', $withdrawal->id, 'requested', null, ['amount' => $amount, 'status' => 'requested'], $tenantId);
+
+                // Langkah 5: beri tahu pengelola kantin untuk verifikasi (UC-23).
+                DB::afterCommit(fn () => Notification::send($this->canteenReviewers($tenantId), new WithdrawalRequested($withdrawal)));
 
                 return $withdrawal;
             });
@@ -75,30 +103,60 @@ final class WithdrawalService
      *
      * @throws WithdrawalException
      */
-    public function approve(Withdrawal $withdrawal, User $reviewer): Withdrawal
+    public function approve(Withdrawal $withdrawal, User $reviewer, ?string $proofPath): Withdrawal
     {
-        if ($withdrawal->status !== 'requested') {
-            throw WithdrawalException::notReviewable();
+        if ($proofPath === null || $proofPath === '') {
+            throw WithdrawalException::proofRequired();
         }
 
-        return DB::transaction(function () use ($withdrawal, $reviewer): Withdrawal {
-            $tenantId = (int) $withdrawal->tenant_id;
-            $amount = (int) $withdrawal->amount;
+        $mismatch = false;
+        $result = DB::transaction(function () use ($withdrawal, $reviewer, $proofPath, &$mismatch): Withdrawal {
+            $locked = Withdrawal::query()->withoutGlobalScope('tenant')->lockForUpdate()->findOrFail($withdrawal->id);
 
-            $this->ledger($tenantId, $withdrawal->id, 'withdrawal_debit', 0, -$amount, 'debit');
+            // Idempoten: persetujuan kedua (mis. klik ganda / dua pengelola bersamaan) tanpa efek.
+            if ($locked->status === 'paid') {
+                return $locked;
+            }
+            if ($locked->status !== 'requested') {
+                throw WithdrawalException::notReviewable();
+            }
+
+            $tenantId = (int) $locked->tenant_id;
+            $amount = (int) $locked->amount;
+
+            // Alur 3a: saldo materialisasi harus sama dengan akumulasi ledger.
+            if (! $this->ledgerMatches($tenantId)) {
+                $locked->forceFill(['status' => 'investigation', 'reviewed_by' => $reviewer->id, 'reviewed_at' => now()])->save();
+                $this->audit->record('withdrawal', $locked->id, 'investigation', ['status' => 'requested'], ['status' => 'investigation'], $tenantId);
+                $mismatch = true;
+
+                return $locked;
+            }
+
+            $this->ledger($tenantId, $locked->id, 'withdrawal_debit', 0, -$amount, 'debit');
             $this->adjustBalance($tenantId, 0, -$amount);
 
-            $withdrawal->forceFill([
+            $locked->forceFill([
                 'status' => 'paid',
                 'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'transfer_proof_path' => $proofPath,
                 'active_tenant_lock' => null,
-                'transfer_snapshot' => ['reviewed_by' => $reviewer->id, 'at' => now()->toIso8601String()],
+                'transfer_snapshot' => ['reviewed_by' => $reviewer->id, 'at' => now()->toIso8601String(), 'proof' => $proofPath],
             ])->save();
 
-            $this->audit->record('withdrawal', $withdrawal->id, 'paid', null, ['amount' => $amount], $tenantId, null);
+            $this->audit->record('withdrawal', $locked->id, 'paid', ['status' => 'requested'], ['status' => 'paid', 'amount' => $amount], $tenantId);
 
-            return $withdrawal;
+            DB::afterCommit(fn () => $this->notifyTenant($locked));
+
+            return $locked;
         });
+
+        if ($mismatch) {
+            throw WithdrawalException::ledgerMismatch();
+        }
+
+        return $result;
     }
 
     /**
@@ -106,29 +164,67 @@ final class WithdrawalService
      *
      * @throws WithdrawalException
      */
-    public function reject(Withdrawal $withdrawal, User $reviewer): Withdrawal
+    public function reject(Withdrawal $withdrawal, User $reviewer, ?string $reason): Withdrawal
     {
-        if ($withdrawal->status !== 'requested') {
-            throw WithdrawalException::notReviewable();
+        $reason = trim((string) $reason);
+        if (mb_strlen($reason) < 5) {
+            throw WithdrawalException::reasonRequired();
         }
 
-        return DB::transaction(function () use ($withdrawal, $reviewer): Withdrawal {
-            $tenantId = (int) $withdrawal->tenant_id;
-            $amount = (int) $withdrawal->amount;
+        return DB::transaction(function () use ($withdrawal, $reviewer, $reason): Withdrawal {
+            $locked = Withdrawal::query()->withoutGlobalScope('tenant')->lockForUpdate()->findOrFail($withdrawal->id);
+            if (! in_array($locked->status, Withdrawal::ACTIVE_STATUSES, true)) {
+                throw WithdrawalException::notReviewable();
+            }
 
-            $this->ledger($tenantId, $withdrawal->id, 'release', $amount, -$amount, 'release');
+            $tenantId = (int) $locked->tenant_id;
+            $amount = (int) $locked->amount;
+            $before = $locked->status;
+
+            $this->ledger($tenantId, $locked->id, 'release', $amount, -$amount, 'release');
             $this->adjustBalance($tenantId, $amount, -$amount);
 
-            $withdrawal->forceFill([
+            $locked->forceFill([
                 'status' => 'rejected',
                 'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'review_note' => mb_substr($reason, 0, 500),
                 'active_tenant_lock' => null,
             ])->save();
 
-            $this->audit->record('withdrawal', $withdrawal->id, 'rejected', null, ['amount' => $amount], $tenantId, null);
+            $this->audit->record('withdrawal', $locked->id, 'rejected', ['status' => $before], ['status' => 'rejected', 'amount' => $amount, 'reason' => $reason], $tenantId);
 
-            return $withdrawal;
+            DB::afterCommit(fn () => $this->notifyTenant($locked));
+
+            return $locked;
         });
+    }
+
+    /** Saldo materialisasi == akumulasi ledger (tersedia dan tertahan). */
+    public function ledgerMatches(int $tenantId): bool
+    {
+        $ledger = DB::table('ledger_entries')->where('tenant_id', $tenantId)
+            ->selectRaw('COALESCE(SUM(available_delta), 0) as available, COALESCE(SUM(held_delta), 0) as held')
+            ->first();
+        $balance = DB::table('tenant_balances')->where('tenant_id', $tenantId)->first();
+
+        return (int) $ledger->available === (int) ($balance->available_amount ?? 0)
+            && (int) $ledger->held === (int) ($balance->held_amount ?? 0);
+    }
+
+    /** @return Collection<int, User> */
+    private function canteenReviewers(int $tenantId): Collection
+    {
+        $canteenId = DB::table('tenants')->where('id', $tenantId)->value('canteen_id');
+        $userIds = UserCanteenRole::query()->where('canteen_id', $canteenId)->whereIn('role', ['owner', 'manager', 'finance'])->pluck('user_id');
+
+        return User::query()->whereIn('id', $userIds)->get();
+    }
+
+    private function notifyTenant(Withdrawal $withdrawal): void
+    {
+        User::query()->whereKey(DB::table('withdrawals')->where('id', $withdrawal->id)->value('requested_by'))->first()
+            ?->notify(new WithdrawalReviewed($withdrawal));
     }
 
     private function ledger(int $tenantId, int $withdrawalId, string $type, int $availableDelta, int $heldDelta, string $suffix): void
@@ -147,7 +243,7 @@ final class WithdrawalService
         ]);
     }
 
-    private function adjustBalance(int $tenantId, int $availableDelta, int $heldDelta): void
+    private function ensureBalanceRow(int $tenantId): void
     {
         DB::table('tenant_balances')->insertOrIgnore([
             'tenant_id' => $tenantId,
@@ -156,6 +252,11 @@ final class WithdrawalService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function adjustBalance(int $tenantId, int $availableDelta, int $heldDelta): void
+    {
+        $this->ensureBalanceRow($tenantId);
 
         // Dua mutasi atomik terpisah (menghindari SQL mentah); serial pada baris yang sama.
         $this->step($tenantId, 'available_amount', $availableDelta);
