@@ -9,6 +9,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Order induk — platform-scoped (TANPA tenant_id): satu checkout bisa lintas tenant.
+ *
+ * @property int $id
+ * @property string $public_id
+ * @property string $order_number
+ * @property string $status
+ * @property array{session_id?: string, name?: string, whatsapp?: string}|null $customer_snapshot
+ * @property array{code?: string, label?: string, zone?: string|null}|null $table_snapshot
  */
 class Order extends Model
 {

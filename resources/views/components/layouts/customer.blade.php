@@ -3,6 +3,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="antialiased">
 <head>
     @include('partials.head')
+    <meta name="broadcast-auth" content="{{ route('customer.broadcast-auth') }}" />
 </head>
 <body class="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
     <div class="mx-auto flex min-h-screen w-full max-w-md flex-col">

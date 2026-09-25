@@ -4,46 +4,8 @@
     <div class="mx-auto max-w-2xl space-y-6">
         {{-- UC-07: layar pembayaran QRIS tampil paling atas selama pesanan menunggu pembayaran. --}}
         <livewire:payments::order-payment :canteen-slug="request()->route('canteen')" />
-        <div id="lacak" class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <p class="text-xs text-zinc-500">Nomor Pesanan</p>
-                    <p class="font-semibold">{{ $order->order_number }}</p>
-                </div>
-                <x-status-badge :status="$order->status === 'paid' ? 'active' : 'pending'">{{ str_replace('_', ' ', $order->status) }}</x-status-badge>
-            </div>
-            @if (($order->table_snapshot['label'] ?? null))
-                <p class="mt-2 text-sm text-zinc-500">Meja: {{ $order->table_snapshot['label'] }} ({{ $order->table_snapshot['code'] ?? '' }})</p>
-            @endif
-            <p class="mt-1 text-sm text-zinc-500" data-test="service-mode">Mode: {{ $order->service_mode === 'pickup' ? 'Pesan dulu / Pick-up' : 'Makan di tempat' }}@if ($order->customer_snapshot['name'] ?? null) · a.n. {{ $order->customer_snapshot['name'] }}@endif</p>
-        </div>
-
-        @foreach ($order->tenantOrders as $tenantOrder)
-            <div wire:key="to-{{ $tenantOrder->id }}" class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-                <div class="mb-2 flex items-center justify-between">
-                    <h2 class="font-semibold">{{ $tenantOrder->tenant->display_name }}</h2>
-                    @if ($tenantOrder->status === 'scheduled')
-                        <x-status-badge :status="'pending'">terjadwal · ambil {{ $tenantOrder->scheduled_at?->setTimezone(config('app.display_timezone'))->format('H.i') }}</x-status-badge>
-                    @else
-                        <x-status-badge :status="'pending'">{{ $tenantOrder->status }}</x-status-badge>
-                    @endif
-                </div>
-                <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    @foreach ($tenantOrder->items as $item)
-                        <li class="flex items-start justify-between gap-3 py-2">
-                            <div class="min-w-0">
-                                <p class="truncate font-medium">{{ $item->quantity }}× {{ $item->name_snapshot }}</p>
-                                @foreach ($item->modifiers as $modifier)
-                                    <p class="truncate text-xs text-zinc-500">+ {{ $modifier->option_name_snapshot }}</p>
-                                @endforeach
-                            </div>
-                            <p class="shrink-0 font-semibold">{{ $rupiah($item->line_total) }}</p>
-                        </li>
-                    @endforeach
-                </ul>
-                <p class="mt-2 text-right text-sm text-zinc-500">Subtotal tenant: {{ $rupiah($tenantOrder->subtotal_amount) }}</p>
-            </div>
-        @endforeach
+        {{-- UC-09: pelacakan status per tenant (realtime + polling cadangan). --}}
+        <livewire:ordering::order-tracker :canteen-slug="request()->route('canteen')" />
 
         <div class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
             <dl class="space-y-1 text-sm">

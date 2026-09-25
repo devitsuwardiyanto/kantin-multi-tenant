@@ -52,8 +52,11 @@ class SettlePayment
                     'net' => $tenantOrder->net_amount,
                 ], (int) $tenantOrder->tenant_id);
 
-                // Pesanan lunas → masuk antrean dapur (disiarkan setelah commit).
-                event(new NewTenantOrderReceived($tenantOrder));
+                // Pesanan lunas → masuk antrean dapur (disiarkan setelah commit). Pre-order
+                // terjadwal baru masuk dapur saat dilepas ordering:release-scheduled (UC-06).
+                if ($tenantOrder->status !== 'scheduled') {
+                    event(new NewTenantOrderReceived($tenantOrder));
+                }
             }
 
             if ($settled) {
