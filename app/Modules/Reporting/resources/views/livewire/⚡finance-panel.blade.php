@@ -2,11 +2,8 @@
 
 use App\Models\Tenant;
 use App\Models\TenantBalance;
-use App\Models\TenantBankAccount;
 use App\Models\UserTenantRole;
 use App\Models\Withdrawal;
-use App\Modules\Payments\Exceptions\WithdrawalException;
-use App\Modules\Payments\Services\WithdrawalService;
 use App\Modules\Reporting\Services\TenantLedgerReport;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +11,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 /**
- * Panel keuangan tenant: saldo, ringkasan & rekonsiliasi dari ledger, dan permintaan penarikan.
+ * Panel keuangan tenant: saldo, ringkasan & rekonsiliasi dari ledger, riwayat penarikan, dan
+ * tautan ke laporan (UC-16/17), rekonsiliasi (UC-18), serta pengajuan penarikan (UC-20).
  * tenantId prop publik TIDAK dipercaya: booted() re-verify membership + set TenantContext.
  */
 new class extends Component
@@ -22,10 +20,6 @@ new class extends Component
     public int $tenantId = 0;
 
     public string $tenantSlug = '';
-
-    public int $amount = 0;
-
-    public ?int $bankAccountId = null;
 
     public function mount(int $tenantId): void
     {
@@ -65,40 +59,9 @@ new class extends Component
     }
 
     #[Computed]
-    public function accounts(): \Illuminate\Database\Eloquent\Collection
-    {
-        return TenantBankAccount::query()->where('tenant_id', $this->tenantId)->where('status', 'verified')->get();
-    }
-
-    #[Computed]
     public function withdrawals(): \Illuminate\Database\Eloquent\Collection
     {
         return Withdrawal::query()->orderByDesc('id')->limit(10)->get();
-    }
-
-    public function requestWithdrawal(): void
-    {
-        $data = $this->validate([
-            'amount' => ['required', 'integer', 'min:1'],
-            'bankAccountId' => ['required', 'integer'],
-        ]);
-
-        $account = TenantBankAccount::query()->find($data['bankAccountId']);
-        if ($account === null || (int) $account->tenant_id !== $this->tenantId) {
-            $this->addError('bankAccountId', 'Rekening tidak valid.');
-
-            return;
-        }
-
-        try {
-            app(WithdrawalService::class)->request($account, (int) $data['amount'], Auth::user());
-            $this->reset(['amount', 'bankAccountId']);
-            session()->flash('status', 'Permintaan penarikan diajukan.');
-        } catch (WithdrawalException $e) {
-            $this->addError('amount', $e->getMessage());
-        }
-
-        unset($this->balance, $this->summary, $this->reconcile, $this->withdrawals);
     }
 };
 ?>
@@ -138,29 +101,10 @@ new class extends Component
         <a href="{{ route('tenant.finance.export', ['tenant' => $this->tenantSlug]) }}" class="mt-2 inline-block text-sm underline">Ekspor CSV ledger</a>
     </div>
 
-    <div class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <h2 class="mb-3 font-semibold">Ajukan Penarikan</h2>
-        @if ($this->accounts->isEmpty())
-            <p class="text-sm text-zinc-500">Belum ada rekening terverifikasi. Hubungi pengelola kantin.</p>
-        @else
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <x-input name="amount" label="Nominal (Rp)" type="number" wire:model="amount" />
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">Rekening</label>
-                    <select wire:model="bankAccountId" class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800">
-                        <option value="">Pilih rekening</option>
-                        @foreach ($this->accounts as $account)
-                            <option value="{{ $account->id }}" wire:key="acc-{{ $account->id }}">{{ $account->bank_code }} ••{{ $account->account_last4 }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <x-button type="button" wire:click="requestWithdrawal">Ajukan</x-button>
-                </div>
-            </div>
-            @error('amount') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-            @error('bankAccountId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-        @endif
+    <div class="flex flex-wrap gap-3 text-sm font-bold">
+        <a href="{{ route('tenant.reports', ['tenant' => $this->tenantSlug]) }}" class="border-2 border-zinc-900 px-4 py-2 dark:border-zinc-100">Laporan penjualan →</a>
+        <a href="{{ route('tenant.reconciliation', ['tenant' => $this->tenantSlug]) }}" class="border-2 border-zinc-900 px-4 py-2 dark:border-zinc-100">Rekonsiliasi →</a>
+        <a href="{{ route('tenant.withdrawals', ['tenant' => $this->tenantSlug]) }}" class="bg-red-600 px-4 py-2 text-white">Ajukan penarikan →</a>
     </div>
 
     <div class="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">

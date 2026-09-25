@@ -52,4 +52,14 @@ return [
         'fake_unavailable' => (bool) env('WHATSAPP_FAKE_UNAVAILABLE', false),
     ],
 
+    // Penarikan dana tenant (UC-20): nominal minimum per pengajuan (Rupiah).
+    'withdrawal' => [
+        'minimum' => (int) env('WITHDRAWAL_MINIMUM', 100000),
+    ],
+
+    // Ekspor laporan (UC-17): di atas batas transaksi ini berkas juga dikirim lewat surel (alur 2a).
+    'report_export' => [
+        'mail_threshold' => (int) env('REPORT_EXPORT_MAIL_THRESHOLD', 5000),
+    ],
+
 ];

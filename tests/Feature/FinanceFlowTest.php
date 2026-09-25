@@ -18,6 +18,7 @@ use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Payments\Services\WithdrawalService;
 use App\Support\Tokens\OpaqueToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -26,6 +27,14 @@ use Tests\TestCase;
 class FinanceFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Saldo skenario kecil (Rp34.000): minimum penarikan UC-20 diturunkan khusus test ini.
+        config(['services.withdrawal.minimum' => 1000]);
+    }
 
     protected function tearDown(): void
     {
@@ -69,15 +78,14 @@ class FinanceFlowTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_member_requests_withdrawal_via_panel(): void
+    public function test_member_requests_withdrawal_via_withdrawal_page(): void
     {
         [, $tenant, $account, $member] = $this->scenario();
 
         Livewire::actingAs($member)
-            ->test('reporting::finance-panel', ['tenantId' => $tenant->id])
+            ->test('payments::withdrawal-request', ['tenantId' => $tenant->id])
             ->set('amount', 10000)
-            ->set('bankAccountId', $account->id)
-            ->call('requestWithdrawal')
+            ->call('submit')
             ->assertHasNoErrors();
 
         $this->assertSame(1, Withdrawal::query()->where('tenant_id', $tenant->id)->where('status', 'requested')->count());
@@ -94,6 +102,7 @@ class FinanceFlowTest extends TestCase
 
         Livewire::actingAs($manager)
             ->test('payments::withdrawal-review')
+            ->set('proof', UploadedFile::fake()->create('bukti.pdf', 100, 'application/pdf'))
             ->call('approve', $withdrawal->id)
             ->assertHasNoErrors();
         $this->assertSame('paid', $withdrawal->fresh()->status);
@@ -106,6 +115,7 @@ class FinanceFlowTest extends TestCase
 
         Livewire::actingAs($otherManager)
             ->test('payments::withdrawal-review')
+            ->set('note', 'Bukan kantin saya')
             ->call('reject', $second->id)
             ->assertForbidden();
     }

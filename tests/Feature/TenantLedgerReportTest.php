@@ -24,6 +24,14 @@ class TenantLedgerReportTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Saldo skenario kecil (Rp34.000): minimum penarikan UC-20 diturunkan khusus test ini.
+        config(['services.withdrawal.minimum' => 1000]);
+    }
+
     protected function tearDown(): void
     {
         foreach (CustomerSession::query()->pluck('id') as $id) {

@@ -26,6 +26,14 @@ class WithdrawalServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Saldo skenario kecil (Rp34.000): minimum penarikan UC-20 diturunkan khusus test ini.
+        config(['services.withdrawal.minimum' => 1000]);
+    }
+
     protected function tearDown(): void
     {
         foreach (CustomerSession::query()->pluck('id') as $id) {
@@ -106,7 +114,7 @@ class WithdrawalServiceTest extends TestCase
         $withdrawal = app(WithdrawalService::class)->request($account, 30000, $user);
         $reviewer = User::factory()->create(['role' => 'admin', 'status' => 'active', 'email_verified_at' => now()]);
 
-        app(WithdrawalService::class)->approve($withdrawal, $reviewer);
+        app(WithdrawalService::class)->approve($withdrawal, $reviewer, 'withdrawal-proofs/bukti.pdf');
 
         $withdrawal->refresh();
         $this->assertSame('paid', $withdrawal->status);
@@ -127,7 +135,7 @@ class WithdrawalServiceTest extends TestCase
         $withdrawal = app(WithdrawalService::class)->request($account, 30000, $user);
         $reviewer = User::factory()->create(['role' => 'admin', 'status' => 'active', 'email_verified_at' => now()]);
 
-        app(WithdrawalService::class)->reject($withdrawal, $reviewer);
+        app(WithdrawalService::class)->reject($withdrawal, $reviewer, 'Rekening belum sesuai');
 
         $withdrawal->refresh();
         $this->assertSame('rejected', $withdrawal->status);
