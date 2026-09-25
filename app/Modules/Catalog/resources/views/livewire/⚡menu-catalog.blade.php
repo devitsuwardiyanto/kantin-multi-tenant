@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Canteen;
+use App\Modules\Catalog\Events\CatalogChanged;
 use App\Modules\Catalog\Services\PublicCatalogQuery;
 use App\Modules\Catalog\Services\TenantOpeningHours;
 use App\Modules\Kitchen\Services\WaitTimeEstimator;
@@ -11,8 +12,9 @@ use Livewire\Component;
 /**
  * Katalog publik lintas tenant (UC-01) dengan estimasi waktu tunggu per tenant (UC-11).
  * Menu habis tetap tampil nonaktif (alur 4a); tenant tutup menampilkan jam buka (alur 4b).
- * Komponen memuat ulang tiap 5 detik sehingga perubahan ketersediaan oleh tenant (UC-14)
- * tampil ≤ 5 detik tanpa memuat ulang halaman.
+ * Perubahan ketersediaan oleh tenant (UC-14) diterima lewat WebSocket (channel publik
+ * canteen.{id}.catalog, event CatalogChanged) sehingga tampil ≤ 5 detik tanpa memuat ulang;
+ * polling 15 detik menjadi cadangan bila koneksi WebSocket terputus.
  */
 new class extends Component
 {
@@ -44,6 +46,16 @@ new class extends Component
     public function add(int $menuId): void
     {
         $this->dispatch('cart-add', menuId: $menuId);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getListeners(): array
+    {
+        $canteen = $this->canteen();
+
+        return $canteen ? ['echo:'.CatalogChanged::channelName((int) $canteen->id).',.CatalogChanged' => '$refresh'] : [];
     }
 
     #[Computed]
@@ -81,7 +93,7 @@ new class extends Component
 };
 ?>
 
-<div class="space-y-4" wire:poll.5s>
+<div class="space-y-4" wire:poll.15s data-catalog-channel="{{ $this->canteen ? CatalogChanged::channelName((int) $this->canteen->id) : '' }}">
     @if (! $this->canteen)
         <x-empty-state title="Kantin tidak ditemukan" description="Pindai QR meja untuk membuka katalog." />
     @else

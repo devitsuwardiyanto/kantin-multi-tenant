@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Pembayaran satu order (platform-scoped; satu payment per order). Uang = integer Rupiah.
- * idempotency_key & payment_reference unik. Status: pending|paid|failed|expired|refunded.
+ * idempotency_key & payment_reference unik. Status: pending|paid|failed|expired|refunded|needs_review.
+ * needs_review diselesaikan pengelola kantin (review_outcome: accepted|refunded) — UC-08 alur 3a.
  */
 class Payment extends Model
 {
@@ -20,6 +21,7 @@ class Payment extends Model
         return [
             'amount' => 'integer',
             'settled_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 

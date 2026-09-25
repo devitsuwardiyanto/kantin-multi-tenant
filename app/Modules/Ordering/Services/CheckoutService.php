@@ -12,6 +12,7 @@ use App\Models\OrderItemModifier;
 use App\Models\Tenant;
 use App\Models\TenantOrder;
 use App\Modules\Admin\Services\AuditLogger;
+use App\Modules\Catalog\Events\CatalogChanged;
 use App\Modules\Catalog\Services\TenantOpeningHours;
 use App\Modules\Ordering\Data\CartLine;
 use App\Modules\Ordering\Data\CheckoutDetails;
@@ -214,6 +215,11 @@ final class CheckoutService
 
         if ($affected === 0) {
             throw CheckoutException::insufficientStock();
+        }
+
+        // UC-14: menu yang stoknya habis karena pesanan ini langsung nonaktif di katalog pelanggan lain.
+        if ((int) Menu::query()->withoutGlobalScope('tenant')->whereKey($line->menuId)->value('stock_qty') === 0) {
+            event(new CatalogChanged((int) Tenant::query()->whereKey($tenantId)->value('canteen_id'), $line->menuId));
         }
 
         DB::table('menu_stock_movements')->insert([

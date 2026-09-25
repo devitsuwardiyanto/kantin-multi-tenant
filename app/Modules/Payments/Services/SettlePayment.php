@@ -181,6 +181,50 @@ class SettlePayment
     }
 
     /**
+     * UC-15 alur 4a: pengembalian dana SATU sub-pesanan yang dibatalkan dapur. Entri reversal
+     * append-only: saldo tenant −net, kredit pengelola (komisi, pajak, biaya layanan sub-pesanan
+     * tsb.) dibalik. Idempoten per sub-pesanan; CHECK saldo menolak bila dana tenant sudah ditarik.
+     * Mengembalikan false bila sub-pesanan ini sudah pernah dibalik.
+     */
+    public function reverseTenantOrder(Payment $payment, TenantOrder $tenantOrder): bool
+    {
+        return DB::transaction(function () use ($payment, $tenantOrder): bool {
+            if (! $this->ledger($payment, $tenantOrder, 'reversal', -((int) $tenantOrder->net_amount), 'refund')) {
+                return false;
+            }
+            $this->creditAvailable((int) $tenantOrder->tenant_id, -((int) $tenantOrder->net_amount));
+
+            $order = Order::query()->findOrFail($payment->order_id);
+            $platform = [
+                'commission_credit' => (int) $tenantOrder->commission_amount,
+                'tax_credit' => (int) $tenantOrder->tax_amount,
+                'service_fee_credit' => (int) $tenantOrder->service_fee_amount,
+            ];
+            foreach ($platform as $type => $amount) {
+                if ($amount !== 0) {
+                    DB::table('platform_ledger_entries')->insertOrIgnore([
+                        'canteen_id' => $order->canteen_id,
+                        'order_id' => $order->id,
+                        'payment_id' => $payment->id,
+                        'idempotency_key' => 'refund:platform:'.$payment->id.':'.$tenantOrder->id.':'.$type,
+                        'type' => 'reversal',
+                        'amount' => -$amount,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            $this->audit->record('ledger', $tenantOrder->id, 'refund_reversal', null, [
+                'payment_id' => $payment->id,
+                'net' => -$tenantOrder->net_amount,
+            ], (int) $tenantOrder->tenant_id);
+
+            return true;
+        });
+    }
+
+    /**
      * Menyisipkan satu entri ledger idempoten. Mengembalikan true jika benar-benar tersisip.
      */
     private function ledger(Payment $payment, TenantOrder $tenantOrder, string $type, int $availableDelta, string $suffix): bool

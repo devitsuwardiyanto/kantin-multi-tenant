@@ -32,6 +32,13 @@ use Illuminate\Support\Str;
  */
 final class WithdrawalService
 {
+    /**
+     * Dua transaksi yang bersamaan mengunci baris saldo dapat berakhir deadlock (MariaDB 1213);
+     * transaksi yang kalah diulang otomatis sehingga pengguna menerima pesan domain yang benar
+     * (mis. “masih ada pengajuan berjalan”), bukan galat 500. Terbukti WithdrawalConcurrencyTest.
+     */
+    private const DEADLOCK_ATTEMPTS = 3;
+
     public function __construct(private AuditLogger $audit) {}
 
     public static function minimum(): int
@@ -92,7 +99,7 @@ final class WithdrawalService
                 DB::afterCommit(fn () => Notification::send($this->canteenReviewers($tenantId), new WithdrawalRequested($withdrawal)));
 
                 return $withdrawal;
-            });
+            }, self::DEADLOCK_ATTEMPTS);
         } catch (UniqueConstraintViolationException) {
             throw WithdrawalException::alreadyActive();
         }
@@ -150,7 +157,7 @@ final class WithdrawalService
             DB::afterCommit(fn () => $this->notifyTenant($locked));
 
             return $locked;
-        });
+        }, self::DEADLOCK_ATTEMPTS);
 
         if ($mismatch) {
             throw WithdrawalException::ledgerMismatch();
@@ -197,7 +204,7 @@ final class WithdrawalService
             DB::afterCommit(fn () => $this->notifyTenant($locked));
 
             return $locked;
-        });
+        }, self::DEADLOCK_ATTEMPTS);
     }
 
     /** Saldo materialisasi == akumulasi ledger (tersedia dan tertahan). */
