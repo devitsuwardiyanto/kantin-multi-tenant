@@ -2,12 +2,13 @@
 
 Sumber requirement: `docs/SRS_Aplikasi_Kantin_Multi_Tenant_ISO29148 v2.pdf` (**SRS v2**, 23 use case) dan
 mockup `docs/Mockup UI Kantin Multi-Tenant-v2.dc.html` (layar `#uc-NN`). Rantai v3: mulai Pertemuan 5 setiap
-pertemuan menuntaskan minimal satu use case; matriks ini diperbarui per pertemuan dan dilengkapi pada Pertemuan 14.
+pertemuan menuntaskan minimal satu use case. **Status akhir (Pertemuan 14): 23 dari 23 use case PASS** — lulus test otomatis
+dan uji penerimaan browser. Kelengkapan matriks dijaga `tests/Feature/RequirementsTraceabilityTest.php`.
 
 | Use case | Kebutuhan | Pertemuan | Implementasi utama | Test penerimaan | Status |
 |---|---|---|---|---|---|
 | UC-19 Autentikasi Pengguna | FR-TEN-01 | 5 | `app/Providers/FortifyServiceProvider.php` (authenticateUsing), `app/Support/Auth/LoginLockout.php`, `app/Http/Controllers/DashboardRedirectController.php`, `config/session.php` | `tests/Feature/Auth/LoginLockoutTest.php` + uji browser | PASS |
-| UC-21 Kelola Tenant & Skema Komisi | FR-ADM-01 | 5 | `app/Modules/Admin/Services/{CreateTenant,ChangeTenantStatus,ChangeCommissionSchedule}.php`, `app/Modules/Admin/Http/Controllers/*`, view `admin::tenants.*` | `tests/Feature/TenantOnboardingTest.php`, `AdminManagementTest`, `CommissionScheduleBoundaryTest` + uji browser | PASS |
+| UC-21 Kelola Tenant & Skema Komisi | FR-ADM-01 | 5 | `app/Modules/Admin/Services/{CreateTenant,ChangeTenantStatus,ChangeCommissionSchedule}.php`, `app/Modules/Admin/Http/Controllers/*`, view `admin::tenants.*` (verifikasi/tolak/rekening utama ditambahkan P14) | `tests/Feature/TenantOnboardingTest.php`, `AdminManagementTest`, `CommissionScheduleBoundaryTest`, `BankAccountVerificationTest` + uji browser | PASS |
 | UC-22 Kelola Meja & QR Code | FR-ADM-02 | 6 | `app/Modules/Admin/Services/{QrTokenService,QrCodeSvg}.php`, `AdminDiningTableController` (qr, status), view `admin::tables.*`, `app/Support/Tokens/OpaqueToken.php` | `tests/Feature/TableQrUseCaseTest.php`, `QrTableSessionTest`, `tests/Unit/OpaqueTokenTest.php` + uji browser | PASS |
 | UC-02 Pindai QR Code Meja | FR-CUS-01 | 6 | `app/Modules/Ordering/Services/ResolveTableScan.php`, `ResolveTableQrController`, `CustomerWelcomeController`, `app/Modules/Catalog/Services/TenantOpeningHours.php`, view `ordering::{welcome,canteen-closed,scan-invalid}` | `tests/Feature/CustomerScanUseCaseTest.php`, `QrTableSessionTest` + uji browser | PASS |
 | UC-13 Kelola Menu & Stok | FR-TEN-02 | 7 | `app/Modules/Catalog/resources/views/livewire/⚡menu-manager.blade.php`, `app/Modules/Catalog/Services/{MenuPhotoStore,MenuStockService}.php`, migrasi `add_details_to_menus_table` (deskripsi, foto, soft delete) | `tests/Feature/MenuManagerUseCaseTest.php`, `TenantMenuManagerTest` + uji browser | PASS |
@@ -32,3 +33,39 @@ pertemuan menuntaskan minimal satu use case; matriks ini diperbarui per pertemua
 
 Rencana: P6 UC-22, UC-02 · P7 UC-13, UC-14, UC-01, UC-11 · P8 UC-03, UC-04 · P9 UC-05, UC-06 · P10 UC-07 ·
 P11 UC-08, UC-10 · P12 UC-15, UC-09, UC-12 · P13 UC-16, UC-17, UC-18, UC-20, UC-23 · P14 uji penerimaan 23 UC.
+
+## Uji penerimaan browser — Pertemuan 14 (25 September 2026)
+
+Satu skenario berurutan pada basis data demo yang baru di-*seed* (MariaDB 11.4 + Redis), server web, *queue worker*,
+dan Reverb berjalan nyata; webhook QRIS dikirim dengan `curl` + HMAC. Tiga peran memakai sesi peramban terpisah
+(pengelola, tenant, pelanggan). Hasil: **23 dari 23 PASS**.
+
+| Use case | Hasil | Bukti |
+|---|---|---|
+| UC-19 Autentikasi Pengguna | PASS | sandi salah ditolak; tenant diarahkan ke /tenant/ayam-pusat/dashboard |
+| UC-21 Kelola Tenant & Skema Komisi | PASS | rekening BCA ••••6721 ditambahkan lalu diverifikasi pengelola |
+| UC-22 Kelola Meja & QR Code | PASS | QR SVG tampil sekali; URL /q/sZ2XupGP7… |
+| UC-02 Pindai QR Code Meja | PASS | halaman sambutan meja; cookie customer_session HttpOnly |
+| UC-01 Telusuri Menu & Tenant | PASS | menu per tenant; cari “kopi” → 2 menu |
+| UC-11 Hitung Estimasi Waktu Tunggu | PASS | Antrean ± 11–16 mnt |
+| UC-04 Kustomisasi Item Pesanan | PASS | grup wajib divalidasi; Regular + Extra shot + catatan tersimpan di keranjang |
+| UC-03 Kelola Keranjang Multi-Tenant | PASS | Subtotal (2 tenant) Rp141.000 Pajak Rp14.100 Biaya layanan Rp2.820 Total Rp157.920 |
+| UC-05 Checkout Pesanan | PASS | pesanan #ORD-260925-7OFPG8 dibuat; diarahkan ke /kantin/kantin-pusat/order |
+| UC-07 Bayar via QRIS Dinamis | PASS | QRIS Rp157.920, sisa waktu 14:57 |
+| UC-08 Verifikasi Pembayaran | PASS | signature salah → 401; webhook sah (PAY-ZTIU8STXL4H9XVNO, Rp157920) → 200; halaman “Pembayaran terverifikasi” |
+| UC-10 Split Payment Otomatis | PASS | 3 baris alokasi, Σ = Rp157920 (selisih 0) |
+| UC-12 Kirim Notifikasi Status | PASS | order:1:paid → whatsapp sent |
+| UC-15 Proses Antrean Dapur (KDS) | PASS | Terima → Selesai; koneksi: TERHUBUNG · WEBSOCKET |
+| UC-09 Lacak Status Pesanan | PASS | status tenant diperbarui tanpa muat ulang; indikator: REAL-TIME |
+| UC-06 Jadwalkan Pre-Order | PASS | slot dipilih (Waktu ambil dipilih 12.30 WIB Mulai dimasak otomatis ± 12.19 Pesanan ditahan ber); tenant_order scheduled 2026-09-25 05:19:00.000000 |
+| UC-13 Kelola Menu & Stok | PASS | daftar menu tenant; stok Geprek Keju setelah checkout = 94 |
+| UC-14 Tandai Menu Habis | PASS | sakelar tenant → katalog pelanggan HABIS ≤ 6 detik |
+| UC-16 Lihat Laporan Penjualan | PASS | laporan menampilkan omset dan menu terlaris |
+| UC-17 Ekspor Laporan | PASS | berkas siap: application/pdf 22167 / application/vnd.openxmlformats-officedocument.spreadsheetml.sheet 2030 |
+| UC-18 Lihat Rekonsiliasi Bagi Hasil | PASS | transaksi dengan referensi PAY-ZTIU8STXL4H9XVNO |
+| UC-20 Ajukan Penarikan Dana | PASS | Rp100.000 diajukan; saldo tertahan = 100000 |
+| UC-23 Verifikasi Pencairan Dana | PASS | bukti transfer diunggah → status paid |
+
+Temuan selama uji penerimaan: rekening tenant hasil onboarding (UC-21) berstatus *unverified* tanpa tombol verifikasi,
+sehingga prasyarat UC-20 (rekening terverifikasi) tidak dapat dipenuhi lewat antarmuka → ditambahkan tombol
+Verifikasi / Tolak / Jadikan utama + `BankAccountVerificationTest`.
