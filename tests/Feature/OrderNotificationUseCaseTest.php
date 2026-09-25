@@ -44,6 +44,10 @@ class OrderNotificationUseCaseTest extends TestCase
     {
         parent::setUp();
 
+        // Percobaan pertama dijalankan langsung agar hasilnya dapat diperiksa; CI memakai
+        // QUEUE_CONNECTION=redis (tanpa worker) sehingga driver sync dipasang eksplisit.
+        config(['queue.default' => 'sync']);
+
         $this->canteen = Canteen::factory()->create(['name' => 'Kantin Teknik']);
         $this->tenant = Tenant::factory()->preOrder()->create(['canteen_id' => $this->canteen->id, 'display_name' => 'Kopi Serambi']);
         CommissionScheme::factory()->create(['tenant_id' => $this->tenant->id, 'commission_rate' => 0.10, 'valid_from' => now()->subMonth(), 'valid_to' => null]);
