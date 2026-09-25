@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\TenantOrder;
 use App\Modules\Admin\Services\AuditLogger;
+use App\Modules\Catalog\Events\CatalogChanged;
 use App\Modules\Ordering\Exceptions\CheckoutException;
 use Illuminate\Support\Facades\DB;
 
@@ -39,6 +40,11 @@ final class CancelUnpaidOrder
             foreach ($items as $item) {
                 Menu::query()->withoutGlobalScope('tenant')->whereKey($item->menu_id)->where('tenant_id', $item->tenant_id)
                     ->increment('stock_qty', $item->quantity);
+
+                // Stok kembali dari nol → menu dapat dipesan lagi; katalog pelanggan diperbarui (UC-14).
+                if ((int) Menu::query()->withoutGlobalScope('tenant')->whereKey($item->menu_id)->value('stock_qty') === (int) $item->quantity) {
+                    event(new CatalogChanged((int) $locked->canteen_id, (int) $item->menu_id));
+                }
 
                 DB::table('menu_stock_movements')->insertOrIgnore([
                     'tenant_id' => $item->tenant_id,
