@@ -156,7 +156,7 @@ class WithdrawalRequestUseCaseTest extends TestCase
         $this->actingAs($this->member)->get(route('tenant.withdrawals', ['tenant' => $this->tenant->slug]))
             ->assertOk()
             ->assertSeeLivewire('payments::withdrawal-request')
-            ->assertSee('BCA ····6721 a.n. Rina S. ✓ terverifikasi')
+            ->assertSee('BCA ••••6721 a.n. Rina S. ✓ terverifikasi')
             ->assertSee('Rp35.000')
             ->assertSee('Tertahan (pengajuan aktif): Rp100.000')
             ->assertSee('Menunggu verifikasi pengelola');

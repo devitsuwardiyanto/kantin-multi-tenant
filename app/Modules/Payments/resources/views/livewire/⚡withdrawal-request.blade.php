@@ -99,7 +99,7 @@ new class extends Component
         </div>
         <span class="ms-auto text-sm font-semibold text-zinc-500">
             @if ($account)
-                Rekening: {{ $account->bank_code }} ····{{ $account->account_last4 }} a.n. {{ $account->account_holder }} ✓ terverifikasi
+                Rekening: {{ $account->bank_code }} ••••{{ $account->account_last4 }} a.n. {{ $account->account_holder }} ✓ terverifikasi
             @else
                 Belum ada rekening terverifikasi
             @endif

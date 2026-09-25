@@ -92,7 +92,7 @@ class WithdrawalVerificationUseCaseTest extends TestCase
             ->assertSeeLivewire('payments::withdrawal-review')
             ->assertSee($this->withdrawal->reference().' · Warung Bu Rina')
             ->assertSee('Rp100.000 ✓ cukup')
-            ->assertSee('BCA ····6721 · Rina S.')
+            ->assertSee('BCA ••••6721 · Rina S.')
             ->assertSee('Cocok — 3 entri ✓');
     }
 

@@ -125,6 +125,7 @@ new class extends Component
         ]);
 
         $path = $this->proof->store('withdrawal-proofs/tenant-'.$withdrawal->tenant_id, 'local');
+        $this->selectedId = $withdrawal->id;
         $this->decide(fn (WithdrawalService $service) => $service->approve($withdrawal, Auth::user(), $path ?: null), 'Penarikan '.$withdrawal->reference().' ditandai dicairkan.');
     }
 
@@ -134,6 +135,7 @@ new class extends Component
         $withdrawal = $this->resolveOwned($withdrawalId);
         abort_if($withdrawal === null, 403);
 
+        $this->selectedId = $withdrawal->id;
         $this->decide(fn (WithdrawalService $service) => $service->reject($withdrawal, Auth::user(), $this->note), 'Penarikan '.$withdrawal->reference().' ditolak; dana dikembalikan ke saldo tenant.');
     }
 
@@ -193,7 +195,7 @@ new class extends Component
                 <div class="border-2 border-zinc-900 bg-white dark:border-zinc-100 dark:bg-zinc-900">
                     <div class="flex flex-wrap items-center gap-2 border-b-2 border-zinc-900 px-5 py-3 dark:border-zinc-100">
                         <p class="text-lg font-bold">{{ $selected->reference() }} · {{ $selected->tenant->display_name }}</p>
-                        <span class="ms-auto bg-red-600 px-2 py-1 text-xs font-extrabold uppercase text-white">
+                        <span class="ms-auto px-2 py-1 text-xs font-extrabold uppercase text-white {{ match ($selected->status) { 'paid' => 'bg-green-700', 'rejected' => 'bg-zinc-500', 'investigation' => 'bg-amber-600', default => 'bg-red-600' } }}">
                             {{ match ($selected->status) { 'paid' => 'Dicairkan', 'rejected' => 'Ditolak', 'investigation' => 'Investigasi', default => 'Menunggu persetujuan' } }}
                         </span>
                     </div>
@@ -204,7 +206,7 @@ new class extends Component
                             <p class="flex justify-between gap-2 border-b border-zinc-200 pb-2 dark:border-zinc-800"><span>Dana tertahan (ledger)</span>
                                 <strong class="{{ $ledger['held'] >= $selected->amount || ! $reviewable ? 'text-green-700' : 'text-red-600' }}">{{ $rupiah($ledger['held']) }}{{ $reviewable ? ($ledger['held'] >= $selected->amount ? ' ✓ cukup' : ' ✗ kurang') : '' }}</strong></p>
                             <p class="flex justify-between gap-2 border-b border-zinc-200 pb-2 dark:border-zinc-800"><span>Saldo tersedia</span><strong>{{ $rupiah($ledger['available']) }}</strong></p>
-                            <p class="flex justify-between gap-2 border-b border-zinc-200 pb-2 dark:border-zinc-800"><span>Rekening tujuan</span><strong>{{ $selected->bankAccount?->bank_code }} ····{{ $selected->bankAccount?->account_last4 }} · {{ $selected->bankAccount?->account_holder }}</strong></p>
+                            <p class="flex justify-between gap-2 border-b border-zinc-200 pb-2 dark:border-zinc-800"><span>Rekening tujuan</span><strong>{{ $selected->bankAccount?->bank_code }} ••••{{ $selected->bankAccount?->account_last4 }} · {{ $selected->bankAccount?->account_holder }}</strong></p>
                             <p class="flex justify-between gap-2"><span>Kesesuaian ledger</span>
                                 <strong class="{{ $ledger['matches'] ? 'text-green-700' : 'text-red-600' }}">{{ $ledger['matches'] ? 'Cocok — '.$ledger['entries'].' entri ✓' : 'Tidak cocok ✗' }}</strong></p>
                             <p class="pt-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Riwayat transaksi tenant</p>
