@@ -40,7 +40,7 @@ class EndToEndJourneyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.qris.webhook_secret' => self::SECRET]);
+        config(['services.qris.webhook_secret' => self::SECRET, 'services.withdrawal.minimum' => 1000]);
     }
 
     protected function tearDown(): void
@@ -67,7 +67,7 @@ class EndToEndJourneyTest extends TestCase
         // 2) Scan QR → sesi anonim + cookie aman.
         $plain = app(QrTokenService::class)->issue($table);
         $this->get(route('customer.scan', ['token' => $plain]))
-            ->assertRedirect(route('customer.home', ['canteen' => $canteen->slug]))
+            ->assertRedirect(route('customer.welcome', ['canteen' => $canteen->slug]))
             ->assertCookie('customer_session');
         $session = CustomerSession::query()->firstOrFail();
         $this->assertSame($canteen->id, $session->canteen_id);
@@ -82,7 +82,7 @@ class EndToEndJourneyTest extends TestCase
 
         // 5) Pembayaran: inisiasi + webhook ber-signature → lunas + settlement.
         $payment = app(PaymentService::class)->initiate($order);
-        $body = json_encode(['event_id' => 'e2e-1', 'payment_reference' => $payment->payment_reference, 'status' => 'success'], JSON_THROW_ON_ERROR);
+        $body = json_encode(['event_id' => 'e2e-1', 'payment_reference' => $payment->payment_reference, 'status' => 'success', 'amount' => $payment->amount], JSON_THROW_ON_ERROR);
         $this->call('POST', '/webhooks/qris', [], [], [], [
             'HTTP_X_QRIS_SIGNATURE' => hash_hmac('sha256', $body, self::SECRET),
             'CONTENT_TYPE' => 'application/json',
@@ -106,7 +106,7 @@ class EndToEndJourneyTest extends TestCase
         $account->save();
         $withdrawal = app(WithdrawalService::class)->request($account, 30000, $member);
         $this->assertSame(30000, (int) TenantBalance::query()->find($tenant->id)->held_amount);
-        app(WithdrawalService::class)->approve($withdrawal, $reviewer);
+        app(WithdrawalService::class)->approve($withdrawal, $reviewer, 'withdrawal-proofs/e2e-transfer.pdf');
 
         // 9) Invarian akhir.
         $balance = TenantBalance::query()->find($tenant->id);
