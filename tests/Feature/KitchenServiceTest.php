@@ -84,6 +84,6 @@ class KitchenServiceTest extends TestCase
     {
         $this->assertSame([], KitchenService::nextStates('completed'));
         $this->assertSame([], KitchenService::nextStates('cancelled'));
-        $this->assertSame(['accepted', 'cancelled'], KitchenService::nextStates('pending'));
+        $this->assertSame(['accepted', 'preparing', 'cancelled'], KitchenService::nextStates('pending'));
     }
 }

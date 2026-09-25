@@ -13,4 +13,9 @@ final class KitchenException extends RuntimeException
     {
         return new self("Transisi status tidak sah: {$from} → {$to}.");
     }
+
+    public static function cancelReasonRequired(): self
+    {
+        return new self('Pilih alasan pembatalan.');
+    }
 }

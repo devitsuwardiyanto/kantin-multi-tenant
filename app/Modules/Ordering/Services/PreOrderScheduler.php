@@ -6,6 +6,8 @@ use App\Models\Tenant;
 use App\Models\TenantOrder;
 use App\Modules\Admin\Services\AuditLogger;
 use App\Modules\Catalog\Services\TenantOpeningHours;
+use App\Modules\Kitchen\Events\NewTenantOrderReceived;
+use App\Modules\Ordering\Events\OrderTrackingUpdated;
 use App\Modules\Ordering\Exceptions\PreOrderException;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -191,6 +193,12 @@ final class PreOrderScheduler
 
                 $tenantOrder->forceFill(['status' => 'pending'])->save();
                 $this->audit->record('tenant_order', $tenantOrder->id, 'pre_order_released', ['status' => 'scheduled'], ['status' => 'pending'], (int) $tenantOrder->tenant_id);
+
+                // Masuk antrean dapur (UC-15) + pelacakan pelanggan (UC-09) + pengingat (UC-06 langkah 6).
+                $tenantOrder->loadMissing(['order', 'tenant']);
+                event(new NewTenantOrderReceived($tenantOrder));
+                OrderTrackingUpdated::dispatch((string) $tenantOrder->order->public_id, (string) $tenantOrder->tenant?->display_name, 'pending');
+                app(CustomerNotifier::class)->preOrderReminder($tenantOrder);
 
                 return 1;
             });

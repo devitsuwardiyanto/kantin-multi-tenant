@@ -7,6 +7,7 @@ use App\Modules\Kitchen\Realtime\TenantChannels;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -14,7 +15,7 @@ use Illuminate\Queue\SerializesModels;
  * Disiarkan saat status sebuah tenant_order berubah (transisi dapur). Channel privat per tenant
  * agar hanya operator tenant tersebut menerima pembaruan.
  */
-final class TenantOrderStatusChanged implements ShouldBroadcast
+final class TenantOrderStatusChanged implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

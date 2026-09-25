@@ -46,4 +46,10 @@ return [
         'webhook_secret' => env('QRIS_WEBHOOK_SECRET'),
     ],
 
+    // Gateway notifikasi WhatsApp (UC-12). Sandbox menulis pesan ke log; fake_unavailable
+    // menirukan provider yang gagal untuk menguji percobaan ulang.
+    'whatsapp' => [
+        'fake_unavailable' => (bool) env('WHATSAPP_FAKE_UNAVAILABLE', false),
+    ],
+
 ];

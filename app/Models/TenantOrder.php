@@ -15,6 +15,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $status
  * @property CarbonImmutable|null $scheduled_at
  * @property CarbonImmutable|null $release_at
+ * @property CarbonImmutable|null $accepted_at
+ * @property CarbonImmutable|null $ready_at
+ * @property CarbonImmutable|null $completed_at
+ * @property CarbonImmutable|null $cancelled_at
+ * @property string|null $cancel_reason
+ * @property string|null $refund_status
  * @property int $subtotal_amount
  * @property int $tax_amount
  * @property int $service_fee_amount
@@ -32,6 +38,10 @@ class TenantOrder extends Model
         return [
             'scheduled_at' => 'datetime',
             'release_at' => 'datetime',
+            'accepted_at' => 'datetime',
+            'ready_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'commission_rate_snapshot' => 'decimal:4',
             'subtotal_amount' => 'integer',
             'tax_amount' => 'integer',
