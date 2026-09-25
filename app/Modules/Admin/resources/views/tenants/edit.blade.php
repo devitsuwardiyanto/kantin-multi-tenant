@@ -40,7 +40,30 @@
             @foreach ($bankAccounts as $acc)
                 <li>{{ $acc->bank_code }} •••• {{ $acc->account_last4 }} — {{ $acc->account_holder }}
                     <x-status-badge :status="$acc->status === 'verified' ? 'active' : 'pending'">{{ $acc->status }}</x-status-badge>
-                    @if ($acc->is_primary) <span class="text-xs font-semibold">PRIMARY</span> @endif</li>
+                    @if ($acc->is_primary) <span class="text-xs font-semibold">PRIMARY</span> @endif
+                    {{-- UC-20 prasyarat: pengelola memverifikasi rekening tujuan pencairan. --}}
+                    <span class="ms-2 inline-flex gap-2 align-middle">
+                        @if ($acc->status !== 'verified')
+                            <form method="POST" action="{{ route('admin.tenants.bank.verify', [$tenant, $acc]) }}">
+                                @csrf
+                                <input type="hidden" name="approve" value="1">
+                                <button type="submit" class="text-xs font-semibold text-green-700 underline" data-test="bank-verify-{{ $acc->id }}">Verifikasi</button>
+                            </form>
+                        @endif
+                        @if ($acc->status === 'unverified')
+                            <form method="POST" action="{{ route('admin.tenants.bank.verify', [$tenant, $acc]) }}">
+                                @csrf
+                                <input type="hidden" name="approve" value="0">
+                                <button type="submit" class="text-xs font-semibold text-red-700 underline">Tolak</button>
+                            </form>
+                        @endif
+                        @if (! $acc->is_primary && $acc->status === 'verified')
+                            <form method="POST" action="{{ route('admin.tenants.bank.primary', [$tenant, $acc]) }}">
+                                @csrf
+                                <button type="submit" class="text-xs font-semibold underline">Jadikan utama</button>
+                            </form>
+                        @endif
+                    </span></li>
             @endforeach
         </ul>
         <form method="POST" action="{{ route('admin.tenants.bank.store', $tenant) }}" class="mt-3 flex flex-wrap items-end gap-2">
