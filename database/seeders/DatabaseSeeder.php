@@ -42,5 +42,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(DemoCanteenSeeder::class);
+        $this->call(EsKopiModifierSeeder::class); // Bab 7: Es Kopi + empat grup modifier
     }
 }
